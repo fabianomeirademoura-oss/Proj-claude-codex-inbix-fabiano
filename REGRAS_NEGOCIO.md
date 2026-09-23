@@ -353,3 +353,46 @@ as semânticas da §1 (vendas incrementais) e da §5 (estoque substitutivo).
 9. **Conferências:** os testes de conferência (§6) rodam sobre a base, sem as
    importações. Os números da §6 continuam sendo os de jan–ago e da foto de
    31/08.
+
+---
+
+## 10. Relatório semanal da diretoria
+
+Decisões do coordenador em 23/09/2026 (PR #3). O relatório não cria cálculo
+novo: ele usa as regras das seções anteriores, e esta seção define o recorte de
+cada item. Mudar um critério daqui é mudança de regra (edite esta seção
+primeiro e depois o código).
+
+1. **Período das metas:** o **acumulado do ano** (de janeiro até o mês da
+   data-base de vendas) e o **mês da data-base**, lado a lado. O mês usa a meta
+   cheia e é marcado "parcial até dd/mm" enquanto não termina (§4.5), sem
+   pró-rata.
+2. **Item 1, ranking de vendedores:** só ativos (§2.3), do maior para o menor
+   atingimento no acumulado, com desempate pelo `ID Vendedor`.
+   - Cada linha mostra a meta, o realizado e o atingimento do acumulado e do mês (§4.1).
+   - O admitido no ano aparece marcado, com o número de meses com meta (§3.3).
+   - A linha da empresa inclui os desligados (§4.2).
+3. **Item 2, abaixo de 80% da meta:** ativos com atingimento **acumulado**
+   menor que 80%. A comparação usa a fração antes de arredondar. Vendedor sem
+   meta no período fica fora da lista.
+   - **Falta para a meta** = meta − realizado (§4.3).
+   - **Falta para 80%** = 80% da meta, arredondado a 2 casas, − realizado.
+4. **Itens 3 e 4, pipeline e previsão vencida:** a foto e a data-base do CRM
+   (§7), sem filtro de período. "Previsão vencida" é a oportunidade ATRASADA da
+   §7. A lista vai do maior atraso para o menor, com desempate pelo
+   `ID Oportunidade`.
+5. **Item 5, maior saída e estoque parado:**
+   - **Maior saída** = os **dez produtos da empresa** com maior **faturamento
+     em R$** no acumulado do ano. Entram só as vendas realizadas (§1), com
+     desempate pelo `ID Produto`. O valor aparece aberto pela filial da venda
+     (§1), e o estoque atual é a soma das filiais na foto em vigor (§5).
+   - **Estoque parado:** o critério da §5, com o prazo padrão, agrupado por
+     filial, com as oportunidades abertas do produto ao lado (§5.4).
+6. **Item 6, riscos:** é análise do agente, e o relatório a marca como tal.
+   - São exatamente três riscos, cada um com o número que o sustenta. O número
+     vem do catálogo de indicadores gerado pelo próprio cálculo, ou vem com a
+     descrição de como reproduzi-lo.
+   - A análise vale só para os dados em que foi escrita (a impressão digital
+     das planilhas).
+7. **Repetibilidade:** os mesmos dados geram os mesmos itens 1 a 5. Nada no
+   relatório depende do relógio (§0.3).

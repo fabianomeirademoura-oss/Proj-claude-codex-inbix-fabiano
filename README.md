@@ -54,7 +54,9 @@ painel-horizonte/
 │   ├── atualizacoes/        planilhas de 19/09 para importar pela tela (NÃO lidas diretamente)
 │   └── importacoes/         criada na 1ª importação: arquivos confirmados, registro.csv e pendentes/
 ├── docs/
-│   └── PAINEL.md            manual do painel: contas, telas e conferência no Excel
+│   ├── PAINEL.md            manual do painel: contas, telas e conferência no Excel
+│   └── RELATORIO_DIRETORIA.md  relatório semanal da diretoria em PDF
+├── relatorios/          LOCAL: relatórios semanais gerados (fora do Git)
 └── testes/              conferências independentes e teste de ponta a ponta
 ```
 
@@ -89,9 +91,10 @@ mesmo nome em `testes\`.
 | `pwsh -NoProfile -File testes/conferir_estoque.ps1` | Estoque em quatro prazos de "parado" | 205 conferências |
 | `pwsh -NoProfile -File testes/conferir_origem.ps1` | Origem do faturamento: vínculo venda–oportunidade por ID (tarefa #2, Codex) | 375 conferências |
 | `pwsh -NoProfile -File testes/conferir_importacao.ps1` | Importação de vendas e de estoque numa cópia temporária de `dados/`: resumo, gravação, reimportação, recusas | 70 conferências |
+| `pwsh -NoProfile -File testes/conferir_relatorio_diretoria.ps1` | Relatório semanal da diretoria: itens 1 a 5 contra as planilhas brutas e a §6, PDF e `calculo.json` idênticos em duas execuções, recusa de riscos inválidos, setembro importado | 237 conferências |
 | `pwsh -NoProfile -File testes/teste_e2e.ps1` | Sobe o servidor com contas temporárias, numa cópia temporária de `dados/`, e testa login, permissões, telas, CSV e importação por HTTP | 73 verificações |
 
-As cinco conferências somam **1.470** comparações. Todas devem terminar com
+As seis conferências somam **1.707** comparações. Todas devem terminar com
 "Todas as N … bateram". Nenhum teste grava nos dados reais: as conferências
 leem só a base (§9.9) e o teste de importação e o e2e trabalham em cópias.
 
@@ -122,6 +125,7 @@ GitHub.
 | Origem do faturamento: vendas vinculadas ao CRM por `ID Oportunidade` | `/origem-vendas` | §0.1, §1 |
 | Importação de Excel só pela diretoria: vendas incrementais (upsert por `ID Venda`) e estoque substitutivo, com resumo e confirmação antes de gravar; recusa arquivo sem coluna obrigatória, dizendo qual | `/importar` | §9 |
 | Validação das planilhas, com lista de erros na tela no lugar dos números | todas as telas | §0.2, §2.6, §5, §7.5 |
+| Relatório semanal da diretoria em PDF: ranking, abaixo de 80%, pipeline por etapa, previsão vencida, maior saída e parados, e três riscos analisados pelo Claude Code ([docs/RELATORIO_DIRETORIA.md](docs/RELATORIO_DIRETORIA.md)) | `/relatorio-diretoria` no Claude Code, ou `app/relatorio_diretoria.ps1` | §1–§5, §7 |
 
 **O que o painel carrega:**
 

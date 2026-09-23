@@ -8,5 +8,8 @@ app/senhas_iniciais.txt
 # são dados de uso, não o produto. Ficam só na máquina onde o painel roda.
 dados/importacoes/
 
+# Relatórios semanais gerados (app/relatorio_diretoria.ps1): dados do negócio e análise de cada semana.
+relatorios/
+
 # Arquivos do sistema
 .DS_Store
