@@ -1,0 +1,23 @@
+# Em cada pull request para a main: confere qual agente fez cada commit
+# (COORDENACAO.md, regra 11). A proteção da main exige que esta checagem passe.
+name: autoria
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  autoria:
+    name: autoria dos commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Confere agente, autor e branch de cada commit
+        env:
+          RAMO: ${{ github.head_ref }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          TOPO: ${{ github.event.pull_request.head.sha }}
+        run: bash .github/scripts/conferir_autoria.sh

@@ -21,7 +21,9 @@ No computador do coordenador, a pasta de cima (`dados_horizonte_maquinas/`) reú
 
 ```
 dados_horizonte_maquinas/
-├── painel-horizonte/     ← projeto em desenvolvimento (RAIZ OFICIAL)
+├── painel-horizonte/     ← projeto em desenvolvimento (RAIZ OFICIAL, branch main do coordenador)
+├── painel-claude/        ← pasta de trabalho do Claude Code (branches claude/*)
+├── painel-codex/         ← pasta de trabalho do Codex (branches codex/*)
 ├── curso-claude-code/    ← base inicial: material do aluno (planilhas + README sem respostas)
 └── material-professor/   ← gabarito, README original com respostas, gerador (não distribuir)
 ```
@@ -92,6 +94,19 @@ mesmo nome em `testes\`.
 As cinco conferências somam **1.470** comparações. Todas devem terminar com
 "Todas as N … bateram". Nenhum teste grava nos dados reais: as conferências
 leem só a base (§9.9) e o teste de importação e o e2e trabalham em cópias.
+
+## Como o código muda (dois agentes)
+
+Cada agente trabalha na sua pasta, na sua branch e com a sua assinatura. Nada
+entra na `main` sem pull request revisado pelo coordenador. Em cada commit dá
+para saber quem o fez: o autor é `Claude Code (agente)` ou `Codex (agente)`, e
+a mensagem termina com `Agente: Claude Code` ou `Agente: Codex`. Um gancho
+local (`.githooks/commit-msg`) e a checagem "autoria" do GitHub recusam commits
+fora da regra. As regras completas estão em [COORDENACAO.md](COORDENACAO.md),
+regras 10 e 11.
+
+Para ver quem fez o quê: `git log --format='%h %an  %s'`, ou a aba Commits do
+GitHub.
 
 ## Estágio atual
 

@@ -1,0 +1,34 @@
+#!/bin/sh
+# Autoria dos commits (COORDENACAO.md, regra 11). O Git roda este gancho antes de
+# gravar cada commit e recusa o commit se ele falhar.
+#   claude/<tarefa>      -> autor "Claude Code (agente)" e a linha "Agente: Claude Code"
+#   codex/<tarefa>       -> autor "Codex (agente)" e a linha "Agente: Codex"
+#   qualquer outra branch -> só commits humanos (coordenador): nenhum agente escreve nelas
+# A mesma checagem roda no GitHub em cada pull request (.github/scripts/conferir_autoria.sh).
+
+msg="$1"
+ramo=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || echo "")
+autor=$(git var GIT_AUTHOR_IDENT | sed 's/ <.*//')
+agente=$(git interpret-trailers --parse "$msg" | sed -n 's/^Agente: *//p' | tail -n 1)
+
+falha() {
+    echo "Commit recusado: $1" >&2
+    echo "Regra: COORDENACAO.md, regra 11." >&2
+    exit 1
+}
+
+case "$ramo" in
+    claude/*) esperado="Claude Code"; autor_esperado="Claude Code (agente)" ;;
+    codex/*)  esperado="Codex";       autor_esperado="Codex (agente)" ;;
+    *)
+        nome=${ramo:-"(nenhuma: HEAD solto)"}
+        case "$autor" in
+            *"(agente)") falha "o autor '$autor' é um agente, e a branch $nome não é de agente. Crie a branch da tarefa antes: git switch -c claude/<tarefa> ou codex/<tarefa>." ;;
+        esac
+        [ -n "$agente" ] && falha "a mensagem diz 'Agente: $agente', mas a branch $nome não é de agente."
+        exit 0 ;;
+esac
+
+[ "$autor" = "$autor_esperado" ] || falha "na branch '$ramo' o autor precisa ser '$autor_esperado', e é '$autor'. Faça o commit na pasta de trabalho do agente (painel-claude ou painel-codex)."
+[ "$agente" = "$esperado" ] || falha "falta a linha 'Agente: $esperado' no fim da mensagem (encontrada: '${agente:-nenhuma}')."
+exit 0

@@ -8,10 +8,12 @@ responsável pelo projeto. Este arquivo tem o acordo e o registro de tarefas.
 
 1. **O coordenador** define as prioridades e atribui as tarefas a cada agente.
    Nenhum agente atribui tarefa ao outro.
-2. **Antes de editar**, cada agente registra aqui sua tarefa, seu escopo e os
-   arquivos ou módulos que pretende alterar.
-3. **Antes de começar**, cada agente consulta as tarefas em andamento. O
-   registro é um aviso de coordenação, não um bloqueio técnico.
+2. **Antes de editar**, cada agente registra sua tarefa, seu escopo e os
+   arquivos ou módulos que pretende alterar num **pull request em rascunho**,
+   aberto a partir da sua branch com o modelo `.github/pull_request_template.md`.
+3. **Antes de começar**, cada agente consulta as tarefas em andamento: os pull
+   requests abertos, inclusive os rascunhos (`gh pr list`). O registro é um
+   aviso de coordenação, não um bloqueio técnico.
 4. **Não editar arquivos reservados pelo outro agente** sem combinar com o
    coordenador a transferência ou a divisão do trabalho.
 5. **Se a tarefa exigir mudanças fora do escopo registrado**, atualizar o
@@ -23,12 +25,42 @@ responsável pelo projeto. Este arquivo tem o acordo e o registro de tarefas.
    interfaces compartilhadas. A exceção é quando a tarefa já as autoriza
    explicitamente.
 8. **Evitar** reformatações gerais e refatorações fora do escopo.
-9. **Ao concluir**, registrar os arquivos alterados, as verificações executadas,
-   as limitações e os impactos para o outro agente.
-10. **Git:** se o projeto usar Git, preferir uma branch e um worktree por agente
-    para tarefas simultâneas, com integração revisada. Se os dois trabalharem
-    na mesma pasta (situação atual, sem Git), manter a separação explícita de
-    arquivos pelo registro abaixo.
+9. **Ao concluir**, preencher a seção "Entrega" do pull request (arquivos
+   alterados, verificações executadas, limitações e impactos para o outro
+   agente) e marcá-lo como pronto para revisão.
+10. **Git: cada um na sua pasta e na sua branch.**
+    - Pastas de trabalho (worktrees), lado a lado com esta:
+
+      | Quem | Pasta | Branches | Autor dos commits |
+      |---|---|---|---|
+      | Claude Code | `../painel-claude` | `claude/<tarefa>` | `Claude Code (agente)` |
+      | Codex | `../painel-codex` | `codex/<tarefa>` | `Codex (agente)` |
+      | Coordenador | `painel-horizonte/` | `main` (e `coordenador/<tarefa>`) | a conta do coordenador |
+
+    - Cada tarefa começa numa branch nova a partir da `main` atualizada:
+      `git fetch origin && git switch -c <agente>/<tarefa> origin/main`.
+    - Para trazer novidades da `main` para a branch, use
+      `git rebase origin/main`, e não merge.
+    - **Nenhum agente faz commit nem push na `main`.** Só o coordenador junta um
+      pull request na `main`, depois de revisá-lo e com a checagem de autoria
+      verde.
+    - Nenhum agente usa `git reset --hard`, `git clean`, `git push --force` ou
+      `git stash` na pasta do outro nem na `main`.
+11. **Todo commit diz qual agente o fez.** Nas branches de agente, o autor é a
+    identidade da pasta de trabalho, e a mensagem termina com a linha
+    `Agente: Claude Code` ou `Agente: Codex`. Duas checagens garantem isso:
+    - o gancho `.githooks/commit-msg` recusa, na hora, o commit fora da regra;
+    - a checagem "autoria" do GitHub repete a regra em cada pull request, e a
+      `main` só aceita pull request com ela verde. Pular o gancho com
+      `--no-verify` não adianta.
+
+    Exemplo de mensagem:
+
+    ```
+    Importação: recusa foto de estoque antiga (§9.6)
+
+    Agente: Claude Code
+    ```
 
 **Interfaces compartilhadas**, que exigem cuidado redobrado: `app/lib/Regras*.ps1`
 (funções usadas pelas páginas e pelos testes), `app/lib/Paginas.ps1` (layout,
@@ -37,10 +69,16 @@ entrada (`CLAUDE.md`, `AGENTS.md`, `REGRAS_NEGOCIO.md`, este arquivo).
 
 ## Como registrar
 
-Acrescente uma linha na tabela ao começar e atualize o status ao terminar.
-Status possíveis: `planejada`, `em andamento`, `concluída`, `pausada`,
-`cancelada`. Detalhes da entrega (verificações, limitações, impactos) vão na
-seção "Entregas", abaixo da tabela.
+A partir da tarefa #6, **o registro é o pull request**: um PR por tarefa,
+aberto como rascunho antes de editar e com o modelo preenchido (agente, tarefa,
+escopo, arquivos previstos, status). O PR em rascunho é o "em andamento". O PR
+pronto para revisão é o "concluída, aguardando o coordenador". O PR juntado ou
+fechado encerra a tarefa. A entrega (verificações, limitações, impactos) fica
+na descrição do PR.
+
+Assim os dois agentes não editam a mesma tabela em branches diferentes, o que
+geraria conflito a cada tarefa. A tabela e as entregas abaixo são o histórico
+das tarefas #1 a #5.
 
 ## Registro de tarefas
 
@@ -50,7 +88,7 @@ seção "Entregas", abaixo da tabela.
 | 2 | Codex | Origem do faturamento: vendas vinculadas ao CRM | Nova página com período, participação no faturamento e vínculo venda–oportunidade por ID; explicação das vendas sem oportunidade. Integração mínima de menu e rota; sem mudar critérios existentes. | app/lib/RegrasOrigem.ps1; app/lib/PaginasOrigem.ps1; app/lib/Paginas.ps1 (menu); app/servidor.ps1 (carga e rota); testes/conferir_origem.ps1; testes/teste_e2e.ps1; docs/PAINEL.md; COORDENACAO.md | concluída |
 | 3 | Claude Code | Tela de importação de Excel (vendas incrementais, estoque substitutivo) | Tela `/importar` só para a diretoria, com resumo antes de gravar e confirmação; recusa arquivo sem coluna obrigatória. Arquivos aceitos ficam em `dados/importacoes/`, sem alterar as planilhas originais. Nova §9 no REGRAS_NEGOCIO.md, com as decisões aprovadas pelo coordenador em 23/09. Os carregadores só aplicam importações quando o servidor pede; as conferências continuam sobre a base. | Novos: app/lib/RegrasImportacao.ps1, app/lib/PaginasImportacao.ps1, testes/conferir_importacao.ps1 (+ .cmd), testes/XlsxTeste.ps1. Alterados: app/lib/Regras.ps1 e app/lib/RegrasEstoque.ps1 (parâmetro opcional de importações), app/servidor.ps1 (rota e upload), app/lib/Paginas.ps1 (menu e CSS), testes/teste_e2e.ps1, REGRAS_NEGOCIO.md (§0.3 nota, §9), README.md, docs/PAINEL.md, PERFIL.md (estado do caso 7), .gitignore, COORDENACAO.md | concluída |
 | 4 | Claude Code | Versionar o projeto no GitHub | `git init` na raiz, primeiro commit e envio para `fabianomeirademoura-oss/Proj-claude-codex-inbix-fabiano` (público, decisão do coordenador em 23/09). `dados/` entra; `dados/importacoes/`, `.env` e `app/usuarios.json` ficam fora. Sem mudar código nem regras. | .git/ (novo), .gitignore, .gitattributes, README.md (caminhos), COORDENACAO.md | concluída |
-| 5 | Claude Code | Identificar qual agente fez cada commit | Uma pasta de trabalho, branch e identidade de autor por agente; linha `Agente:` obrigatória na mensagem; gancho local e checagem no GitHub (Actions) que recusam commit fora da regra; proteção da `main`; registro de tarefas passa a ser o pull request. Autorizado pelo coordenador em 23/09. | .githooks/commit-msg, .github/ (workflow, script, modelo de PR), .gitattributes, COORDENACAO.md, CLAUDE.md, AGENTS.md, README.md | em andamento |
+| 5 | Claude Code | Identificar qual agente fez cada commit (PR #1) | Uma pasta de trabalho, branch e identidade de autor por agente; linha `Agente:` obrigatória na mensagem; gancho local e checagem no GitHub (Actions) que recusam commit fora da regra; proteção da `main`; registro de tarefas passa a ser o pull request. Autorizado pelo coordenador em 23/09. | .githooks/commit-msg, .github/ (workflow, script, modelo de PR), .gitattributes, COORDENACAO.md, CLAUDE.md, AGENTS.md, README.md | concluída |
 
 ## Entregas
 
