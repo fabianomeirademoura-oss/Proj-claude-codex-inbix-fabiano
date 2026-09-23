@@ -42,10 +42,12 @@ painel-horizonte/
 ├── .gitignore           credenciais e arquivos locais fora do versionamento
 ├── .env                 LOCAL: logins e senhas em texto (nunca versionar nem enviar)
 ├── .claude/launch.json  inicialização do servidor para o preview do Claude Code
+├── .claude/skills/feedback-semanal/  skill do Claude Code: mensagem de WhatsApp de feedback a cada vendedor
 ├── app/                 aplicação
 │   ├── servidor.ps1         rotas HTTP (só localhost)
 │   ├── iniciar.cmd          atalho do Windows para subir o servidor
 │   ├── criar_usuarios.ps1   cria as contas (e o atalho .cmd)
+│   ├── feedback_semanal.ps1 números do feedback semanal por vendedor, em JSON (§11)
 │   ├── usuarios.json        LOCAL: hashes das senhas (nunca versionar)
 │   └── lib/                 Regras*.ps1 (regras), Paginas*.ps1 (HTML), Auth, Xlsx
 ├── dados/               planilhas base (jan–ago/2026, foto de estoque 31/08) — nunca alteradas
@@ -87,9 +89,10 @@ mesmo nome em `testes\`.
 | `pwsh -NoProfile -File testes/conferir_estoque.ps1` | Estoque em quatro prazos de "parado" | 205 conferências |
 | `pwsh -NoProfile -File testes/conferir_origem.ps1` | Origem do faturamento: vínculo venda–oportunidade por ID (tarefa #2, Codex) | 375 conferências |
 | `pwsh -NoProfile -File testes/conferir_importacao.ps1` | Importação de vendas e de estoque numa cópia temporária de `dados/`: resumo, gravação, reimportação, recusas | 70 conferências |
+| `pwsh -NoProfile -File testes/conferir_feedback.ps1` | Feedback semanal (§11): semana, mês, projeção, necessário por mês e pipeline de cada ativo, na base e com setembro de `atualizacoes/` | 348 conferências |
 | `pwsh -NoProfile -File testes/teste_e2e.ps1` | Sobe o servidor com contas temporárias, numa cópia temporária de `dados/`, e testa login, permissões, telas, CSV e importação por HTTP | 73 verificações |
 
-As cinco conferências somam **1.470** comparações. Todas devem terminar com
+As seis conferências somam **1.818** comparações. Todas devem terminar com
 "Todas as N … bateram". Nenhum teste grava nos dados reais: as conferências
 leem só a base (§9.9) e o teste de importação e o e2e trabalham em cópias.
 
@@ -106,6 +109,7 @@ leem só a base (§9.9) e o teste de importação e o e2e trabalham em cópias.
 | Estoque: dinheiro no pátio por filial × categoria, parados (prazo configurável), sem estoque, abaixo do mínimo, CSV | `/estoque`, `/estoque.csv` | §5 |
 | Origem do faturamento: vendas vinculadas ao CRM por `ID Oportunidade` | `/origem-vendas` | §0.1, §1 |
 | Importação de Excel só pela diretoria: vendas incrementais (upsert por `ID Venda`) e estoque substitutivo, com resumo e confirmação antes de gravar; recusa arquivo sem coluna obrigatória, dizendo qual | `/importar` | §9 |
+| Feedback semanal ao vendedor: mensagem de WhatsApp do gerente com meta, atingimento, ritmo do mês, projeção de fim de ano pela média e pipeline ponderado. Só redige; não envia | skill `feedback-semanal` (Claude Code) + `app/feedback_semanal.ps1` | §11 |
 | Validação das planilhas, com lista de erros na tela no lugar dos números | todas as telas | §0.2, §2.6, §5, §7.5 |
 
 **O que o painel carrega:**

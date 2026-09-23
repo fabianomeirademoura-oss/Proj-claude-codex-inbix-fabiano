@@ -10,3 +10,6 @@ dados/importacoes/
 
 # Arquivos do sistema
 .DS_Store
+
+# Mensagens de feedback semanal: texto pessoal para cada vendedor, gerado sob demanda.
+relatorios/feedback-semanal/

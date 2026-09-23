@@ -353,3 +353,47 @@ as semânticas da §1 (vendas incrementais) e da §5 (estoque substitutivo).
 9. **Conferências:** os testes de conferência (§6) rodam sobre a base, sem as
    importações. Os números da §6 continuam sendo os de jan–ago e da foto de
    31/08.
+
+---
+
+## 11. Feedback semanal ao vendedor
+
+Pedido do coordenador em 23/09/2026: uma mensagem de WhatsApp do gerente para
+cada vendedor, com meta, atingimento, ritmo, projeção e pipeline. Os números vêm
+de `app/feedback_semanal.ps1`; a skill `feedback-semanal` só redige o texto.
+Meta, realizado, atingimento e gap seguem a §4; o pipeline segue a §7 e a
+conversão segue a §8. Esta seção define apenas os indicadores novos.
+
+1. **Quem recebe:** só vendedores **ativos** (§2.3). Oportunidades órfãs (§2.4)
+   não entram no feedback de ninguém.
+2. **Semana:** os 7 dias corridos que terminam na data-base de vendas,
+   incluindo a data-base. A semana anterior são os 7 dias antes dela. Só vendas
+   faturadas (§1).
+3. **Ritmo do mês:** se o mês da data-base está em andamento, o atingimento do
+   mês (meta cheia, §4.5) é comparado com a fração de dias corridos do mês
+   (dia da data-base ÷ dias do mês). "No ritmo" se o atingimento for maior ou
+   igual a essa fração. Não é pró-rata da meta: a meta continua cheia.
+4. **Ano e projeção** (só meses com meta, como na §4.1):
+   - meses fechados = meses com meta de janeiro até o mês anterior ao da
+     data-base (ou até o mês da data-base, se ele já terminou);
+   - média mensal = realizado nos meses fechados ÷ número de meses fechados;
+   - projeção de fim de ano "se mantiver a média" = média mensal × número de
+     meses com meta no ano;
+   - necessário por mês = (meta do ano − realizado nos meses fechados) ÷ número
+     de meses com meta ainda não fechados (o mês em andamento conta inteiro);
+   - falta para a meta do ano = meta do ano − realizado no ano até a data-base.
+   - Vendedor admitido no ano (§3) usa só os meses dele. A projeção compara a
+     média do ramp-up com as metas cheias; a mensagem deve dizer isso.
+5. **Pipeline:** a foto do CRM (§7), com a data-base do CRM. Se ela for
+   anterior à data-base de vendas, a mensagem avisa que algumas oportunidades
+   podem já ter fechado e pede a atualização do CRM. Não há baixa automática
+   (§7.6).
+   - Cobertura = ponderado ÷ falta para a meta do ano.
+   - Cenário ponderado = realizado no ano + ponderado, comparado com a meta do
+     ano. É o valor esperado do pipeline, não uma promessa.
+6. **Sinal**, só para o tom da mensagem, pela projeção ÷ meta do ano: "no
+   ritmo" a partir de 100%, "um pouco abaixo" de 90% a 100%, "abaixo" abaixo
+   de 90%, "sem histórico" sem nenhum mês fechado com meta.
+7. **Envio:** a skill só redige e salva as mensagens em
+   `relatorios/feedback-semanal/` (fora do Git). Enviar é sempre uma ação do
+   gerente, ou um pedido explícito dele, mensagem por mensagem.
