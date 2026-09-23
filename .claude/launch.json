@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "painel-horizonte",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "app/servidor.ps1", "-Porta", "8080"],
+      "port": 8080
+    },
+    {
+      "name": "painel-horizonte-mac",
+      "runtimeExecutable": "pwsh",
+      "runtimeArgs": ["-NoProfile", "-File", "app/servidor.ps1", "-Porta", "8080"],
+      "port": 8080
+    }
+  ]
+}

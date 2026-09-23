@@ -1,0 +1,12 @@
+# Credenciais e dados de acesso — nunca versionar nem distribuir
+.env
+.env.*
+app/usuarios.json
+app/senhas_iniciais.txt
+
+# Importações feitas pela tela (arquivos confirmados, pendentes e registro.csv):
+# são dados de uso, não o produto. Ficam só na máquina onde o painel roda.
+dados/importacoes/
+
+# Arquivos do sistema
+.DS_Store

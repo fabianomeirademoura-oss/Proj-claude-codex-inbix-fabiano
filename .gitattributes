@@ -1,0 +1,3 @@
+# Atalhos do Windows precisam de CRLF; planilhas são binárias (o Git não mescla .xlsx).
+*.cmd  text eol=crlf
+*.xlsx binary
