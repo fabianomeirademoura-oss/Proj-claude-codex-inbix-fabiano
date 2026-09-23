@@ -5,9 +5,9 @@
 # Mesmos dados => mesmo resultado: nada aqui lê o relógio, e toda ordenação tem desempate por ID.
 # Depende de Regras.ps1, RegrasPipeline.ps1 e RegrasEstoque.ps1.
 
-# Decisões do coordenador para este relatório (23/09/2026, PR #3):
-$script:RelCorteAtingimento = [decimal]0.80   # item 2: abaixo de 80% da meta, pelo acumulado do ano
-$script:RelTopProdutos = 10                   # item 5: dez produtos da empresa, por faturamento no acumulado do ano
+# Recorte do relatório: REGRAS_NEGOCIO.md §10 (mudar aqui exige mudar a §10 antes).
+$script:RelCorteAtingimento = [decimal]0.80   # §10.3: abaixo de 80% da meta, pelo acumulado do ano
+$script:RelTopProdutos = 10                   # §10.5: dez produtos da empresa, por faturamento no acumulado do ano
 $script:RelNomesMes = @('', 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro')
 $script:RelMesesCurtos = @('', 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez')
 

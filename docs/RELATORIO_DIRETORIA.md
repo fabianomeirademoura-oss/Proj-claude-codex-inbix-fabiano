@@ -50,9 +50,7 @@ de cada semana.
 | 5 | Maior saída e estoque parado | Os **dez produtos da empresa com maior faturamento** no acumulado do ano (§1), com o valor por filial da venda e o estoque atual. Depois, o estoque parado por filial (§5, prazo padrão), com as oportunidades abertas ao lado (§5.4). |
 | 6 | Três riscos | Análise do agente. Cada risco traz o número que o sustenta. |
 
-As escolhas de período (acumulado e mês lado a lado), do corte de 80% e de "maior saída = faturamento
-em R$" foram decisões do coordenador em 23/09/2026 (PR #3). Elas ficam como constantes no topo de
-`app/lib/RegrasRelatorioDiretoria.ps1`.
+Os critérios de cada seção estão no [REGRAS_NEGOCIO.md §10](../REGRAS_NEGOCIO.md#10-relatório-semanal-da-diretoria), decididos pelo coordenador em 23/09/2026. Para mudar um deles, edite primeiro a §10, que fica versionada no Git junto com o código, e só depois `app/lib/RegrasRelatorioDiretoria.ps1`.
 
 ## Por que os itens 1 a 5 saem sempre iguais
 
