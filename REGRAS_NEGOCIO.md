@@ -353,3 +353,22 @@ as semânticas da §1 (vendas incrementais) e da §5 (estoque substitutivo).
 9. **Conferências:** os testes de conferência (§6) rodam sobre a base, sem as
    importações. Os números da §6 continuam sendo os de jan–ago e da foto de
    31/08.
+
+
+## 10. Relatório semanal da diretoria
+
+Critério aprovado pelo coordenador em 23/09/2026 para este relatório:
+
+- Metas e realizado acumulados no mês até a data-base de vendas, comparados
+  com a meta mensal cheia, sem pró-rata (§4.5). Abaixo de 80% usa a fração
+  antes de arredondar; falta em reais é a distância até 100% (§4.3).
+- Saídas nos últimos sete dias corridos, incluindo a data-base de vendas,
+  somente faturadas (§1). Ranking de até dez produtos por filial, por soma
+  da quantidade registrada na unidade do produto; desempate por ID.
+- Ranking de vendedores ativos por faturamento, desempate por ID (§2.3).
+- Pipeline e atraso usam a foto e a data-base do CRM (§7); estoque parado
+  usa a foto vigente e o prazo de 180 dias (§5), sem filtro semanal.
+- Os itens 1–5 são calculados pelo código. O item 6 contém três riscos
+  interpretados pelo agente, cada um com evidência numérica da mesma geração.
+  Sem duas fotos comparáveis, não inferir variação semanal. Sem vínculo de
+  evidência atual, não apresentar a análise como concluída.
