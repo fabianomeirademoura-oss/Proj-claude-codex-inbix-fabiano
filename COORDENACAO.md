@@ -49,7 +49,7 @@ seção "Entregas", abaixo da tabela.
 | 1 | Claude Code | Organizar a estrutura do projeto e centralizar as regras | Pastas do projeto, do material didático e do professor; documentos de entrada; caminhos do app e dos testes. Sem mudar critérios de cálculo e sem implementar a importação de setembro. | Toda a raiz `painel-horizonte/` (estrutura, docs, caminhos em `app/` e `testes/`), `../curso-claude-code/README.md`, `../material-professor/`, `../.claude/launch.json`, `../LEIA-ME.md` | concluída |
 | 2 | Codex | Origem do faturamento: vendas vinculadas ao CRM | Nova página com período, participação no faturamento e vínculo venda–oportunidade por ID; explicação das vendas sem oportunidade. Integração mínima de menu e rota; sem mudar critérios existentes. | app/lib/RegrasOrigem.ps1; app/lib/PaginasOrigem.ps1; app/lib/Paginas.ps1 (menu); app/servidor.ps1 (carga e rota); testes/conferir_origem.ps1; testes/teste_e2e.ps1; docs/PAINEL.md; COORDENACAO.md | concluída |
 | 3 | Claude Code | Tela de importação de Excel (vendas incrementais, estoque substitutivo) | Tela `/importar` só para a diretoria, com resumo antes de gravar e confirmação; recusa arquivo sem coluna obrigatória. Arquivos aceitos ficam em `dados/importacoes/`, sem alterar as planilhas originais. Nova §9 no REGRAS_NEGOCIO.md, com as decisões aprovadas pelo coordenador em 23/09. Os carregadores só aplicam importações quando o servidor pede; as conferências continuam sobre a base. | Novos: app/lib/RegrasImportacao.ps1, app/lib/PaginasImportacao.ps1, testes/conferir_importacao.ps1 (+ .cmd), testes/XlsxTeste.ps1. Alterados: app/lib/Regras.ps1 e app/lib/RegrasEstoque.ps1 (parâmetro opcional de importações), app/servidor.ps1 (rota e upload), app/lib/Paginas.ps1 (menu e CSS), testes/teste_e2e.ps1, REGRAS_NEGOCIO.md (§0.3 nota, §9), README.md, docs/PAINEL.md, PERFIL.md (estado do caso 7), .gitignore, COORDENACAO.md | concluída |
-| 4 | Claude Code | Versionar o projeto no GitHub | `git init` na raiz, primeiro commit e envio para `fabianomeirademoura-oss/Proj-claude-codex-inbix-fabiano` (público, decisão do coordenador em 23/09). `dados/` entra; `dados/importacoes/`, `.env` e `app/usuarios.json` ficam fora. Sem mudar código nem regras. | .git/ (novo), .gitignore, COORDENACAO.md | em andamento |
+| 4 | Claude Code | Versionar o projeto no GitHub | `git init` na raiz, primeiro commit e envio para `fabianomeirademoura-oss/Proj-claude-codex-inbix-fabiano` (público, decisão do coordenador em 23/09). `dados/` entra; `dados/importacoes/`, `.env` e `app/usuarios.json` ficam fora. Sem mudar código nem regras. | .git/ (novo), .gitignore, .gitattributes, README.md (caminhos), COORDENACAO.md | concluída |
 
 ## Entregas
 
@@ -147,3 +147,19 @@ seção "Entregas", abaixo da tabela.
   - Para as vendas de setembro, a coluna de linha da página de origem se refere ao arquivo importado (propriedade `Arquivo`), e não a `vendas_2026_jan-ago.xlsx`.
   - Os testes do Codex continuam sobre a base e não são afetados.
   - `CLAUDE.md` e `AGENTS.md` ainda listam só 4 verificações. A lista completa está no README; a atualização dos documentos de entrada fica para o coordenador decidir.
+
+### #4 — Claude Code — Projeto no GitHub (23/09/2026)
+
+- **Repositório:** https://github.com/fabianomeirademoura-oss/Proj-claude-codex-inbix-fabiano (público, branch `main`), por decisão do coordenador, ciente de que a §6 e o `PERFIL.md` trazem os números de conferência do curso.
+- **Conteúdo:** 47 arquivos: código, testes, regras, documentação e as planilhas fictícias de `dados/`.
+- **Fora do repositório:** `.env`, `app/usuarios.json` e `dados/importacoes/`. Conferido no GitHub depois do envio.
+- **Segredos:** varredura antes do commit, procurando as senhas expostas no chat, tokens e chaves; nada encontrado.
+- **Ajustes:**
+  - `.gitignore` passou a excluir `dados/importacoes/` inteira;
+  - novo `.gitattributes`, com `.cmd` em CRLF para o Windows e `.xlsx` como binário;
+  - o README perdeu os caminhos absolutos desta máquina.
+- **Autor dos commits:** `meirafml`, a identidade global deste Mac, por decisão do coordenador. O envio usou a conta `fabianomeirademoura-oss`, que é a conta ativa do `gh` agora.
+- **Impactos para o Codex:**
+  - A pasta agora é um repositório Git. Não rodar `git init`, `git reset` ou `git clean` sobre ela.
+  - Pela regra 10, tarefas simultâneas passam a usar uma branch e um worktree por agente (ex.: `git worktree add ../painel-codex -b codex/<tarefa>`), com integração por pull request revisado pelo coordenador.
+  - Nada de push direto na `main` sem combinar.
