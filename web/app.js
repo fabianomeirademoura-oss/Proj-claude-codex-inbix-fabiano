@@ -2,6 +2,7 @@
 // Rotas do painel em Node — espelho de app/servidor.ps1, para rodar na Vercel.
 // A importação de planilhas (§9) fica só na versão PowerShell: a Vercel não tem disco permanente.
 
+const fs = require('fs');
 const path = require('path');
 const N = require('./lib/numeros');
 const R = require('./lib/regras');
@@ -48,12 +49,26 @@ function atualizarEstoque() {
 
 // ---------- HTTP ----------
 
+// App instalável (PWA): arquivos de public/, sem login. Na Vercel eles nem chegam aqui (a Vercel
+// serve a pasta direto); a rota existe para a versão local responder igual à PowerShell.
+const DIR_PUBLICO = path.join(__dirname, '..', 'public');
+const TIPOS_PUBLICOS = { '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.js': 'text/javascript; charset=utf-8', '.html': 'text/html; charset=utf-8', '.txt': 'text/plain; charset=utf-8' };
+function arquivoPublico(caminho) {
+  const m = /^\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+(\.[a-z]+)$/i.exec(caminho);
+  if (!m) return null;
+  const tipo = TIPOS_PUBLICOS[m[1].toLowerCase()];
+  if (!tipo) return null;
+  const p = path.join(DIR_PUBLICO, caminho.slice(1));
+  try { return fs.statSync(p).isFile() ? { caminho: p, tipo } : null; } catch { return null; }
+}
+
 function responder(res, status, tipo, corpo, extra = {}) {
-  let buf = Buffer.from(corpo, 'utf8');
+  let buf = Buffer.isBuffer(corpo) ? corpo : Buffer.from(corpo, 'utf8');
   if (extra.bom) buf = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), buf]);
   const cab = {
     'Content-Type': tipo,
-    'Content-Security-Policy': "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    // Script, imagem, manifesto e service worker só do próprio site (PWA); nada inline.
+    'Content-Security-Policy': "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; manifest-src 'self'; worker-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
     'Cache-Control': 'no-store',
@@ -186,7 +201,10 @@ async function tratar(req, res) {
   const q = query(url);
 
   if (caminho === '/estilo.css' && metodo === 'GET') return responder(res, 200, 'text/css; charset=utf-8', P.css());
-  if (caminho === '/robots.txt' && metodo === 'GET') return responder(res, 200, TEXTO, 'User-agent: *\nDisallow: /\n');
+  if (metodo === 'GET') {
+    const pub = arquivoPublico(caminho);
+    if (pub) return responder(res, 200, pub.tipo, fs.readFileSync(pub.caminho));
+  }
 
   const token = cookie(req, 'sessao');
   const sessao = A.sessao(token);

@@ -52,8 +52,8 @@ function opcoesMeses(meses, selecionado) {
 function layout(titulo, corpo, usuario, secao = 'vendas') {
   const ativo = (s) => (s === secao ? ' class="ativo" aria-current="page"' : '');
   const topo = usuario ? `<header class="topo">
-  <nav class="nav">
-    <span class="marca-app">Horizonte Máquinas</span>
+  <span class="marca-app">Horizonte Máquinas</span>
+  <nav class="nav" aria-label="Seções do painel">
     <a href="/"${ativo('vendas')}>Vendas e metas</a>
     <a href="/origem-vendas"${ativo('origem')}>Origem do faturamento</a>
     <a href="/pipeline"${ativo('pipeline')}>Pipeline</a>
@@ -61,7 +61,7 @@ function layout(titulo, corpo, usuario, secao = 'vendas') {
     <a href="/estoque"${ativo('estoque')}>Estoque</a>
     ${N.igual(usuario.perfil, 'diretoria') ? `<a href="/importar"${ativo('importar')}>Importar</a>` : ''}
   </nav>
-  <div class="usuario">${esc(usuario.nome)}
+  <div class="usuario"><span class="nome-usuario">${esc(usuario.nome)}</span>
     <form method="post" action="/sair"><button type="submit" class="link">Sair</button></form>
   </div>
 </header>` : '';
@@ -69,9 +69,18 @@ function layout(titulo, corpo, usuario, secao = 'vendas') {
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#252523" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Horizonte">
 <title>${esc(titulo)}</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/icones/favicone-32.png">
+<link rel="apple-touch-icon" href="/icones/apple-touch-icon.png">
 <link rel="stylesheet" href="/estilo.css">
+<script src="/painel.js" defer></script>
 </head>
 <body>
 ${topo}

@@ -57,8 +57,8 @@ function New-Layout([string]$Titulo, [string]$Corpo, $Usuario, [string]$Secao = 
     $topo = if ($Usuario) {
         @"
 <header class="topo">
-  <nav class="nav">
-    <span class="marca-app">Horizonte Máquinas</span>
+  <span class="marca-app">Horizonte Máquinas</span>
+  <nav class="nav" aria-label="Seções do painel">
     <a href="/"$(& $ativo 'vendas')>Vendas e metas</a>
     <a href="/origem-vendas"$(& $ativo 'origem')>Origem do faturamento</a>
     <a href="/pipeline"$(& $ativo 'pipeline')>Pipeline</a>
@@ -66,7 +66,7 @@ function New-Layout([string]$Titulo, [string]$Corpo, $Usuario, [string]$Secao = 
     <a href="/estoque"$(& $ativo 'estoque')>Estoque</a>
     $(if ($Usuario.perfil -eq 'diretoria') { "<a href=""/importar""$(& $ativo 'importar')>Importar</a>" })
   </nav>
-  <div class="usuario">$(Esc $Usuario.nome)
+  <div class="usuario"><span class="nome-usuario">$(Esc $Usuario.nome)</span>
     <form method="post" action="/sair"><button type="submit" class="link">Sair</button></form>
   </div>
 </header>
@@ -77,9 +77,18 @@ function New-Layout([string]$Titulo, [string]$Corpo, $Usuario, [string]$Secao = 
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#252523" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Horizonte">
 <title>$(Esc $Titulo)</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/icones/favicone-32.png">
+<link rel="apple-touch-icon" href="/icones/apple-touch-icon.png">
 <link rel="stylesheet" href="/estilo.css">
+<script src="/painel.js" defer></script>
 </head>
 <body>
 $topo
@@ -317,7 +326,7 @@ a{color:var(--acento)}
 h1{font-size:22px;font-weight:600;margin:0 0 4px}h2{font-size:17px;font-weight:600;margin:0 0 10px}
 .topo{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;background:var(--papel);border-bottom:1px solid var(--linha)}
 .marca-app{font-weight:600;text-decoration:none;color:var(--texto)}
-.nav{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;gap:18px;align-items:center;flex-wrap:wrap;flex:1}
 .nav a{color:var(--suave);text-decoration:none;padding:4px 0;border-bottom:2px solid transparent}
 .nav a.ativo{color:var(--texto);border-bottom-color:var(--acento)}
 h3{font-size:15px;font-weight:600;margin:20px 0 6px}
@@ -396,6 +405,38 @@ button.secundario{background:var(--papel);color:var(--texto);border:1px solid va
 details{margin-top:12px}summary{cursor:pointer;color:var(--acento)}
 code{font-size:13px;background:var(--fundo);padding:0 4px;border-radius:4px}
 .aviso-orfa{background:var(--alerta-claro);color:var(--alerta);padding:10px 14px;border-radius:8px;border:1px solid var(--alerta)}
-@media (max-width:520px){.rankings{grid-template-columns:1fr}.cartao .valor{font-size:20px}}
+/* Celular: menu em abas roláveis, filtros empilhados, toques de 44 px, campos de 16 px (o iPhone não dá zoom), áreas seguras do notch */
+@media (max-width:720px){
+body{font-size:14px}
+main{padding:12px max(12px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+h1{font-size:19px}h2{font-size:16px}
+.topo{position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:2px 12px;padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left))}
+.usuario{font-size:13px;gap:8px;min-width:0}
+.nome-usuario{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45vw}
+.nav{order:3;flex:0 0 100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:6px 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.nav::-webkit-scrollbar{display:none}
+.nav a{flex:0 0 auto;padding:8px 14px;border:1px solid var(--linha);border-radius:999px;white-space:nowrap}
+.nav a.ativo{background:var(--acento);border-color:var(--acento);color:var(--papel)}
+button,.botao{min-height:44px;padding:10px 16px}
+button.link{min-height:44px;padding:0 4px}
+select,input[type=text],input[type=password],input[type=number]{font-size:16px;min-height:44px}
+.filtros form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:10px}
+.filtros form label:not(.check){display:flex;flex-direction:column;gap:4px;min-width:0}
+.filtros form select{width:100%}
+.filtros form>.check,.filtros form>button{grid-column:1/-1}
+.check{flex-wrap:wrap;min-height:44px}
+input[type=checkbox],input[type=radio]{width:20px;height:20px}
+.cartoes{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.cartao{padding:10px 12px}
+.cartao .valor{font-size:min(18px,4.2vw);white-space:nowrap}
+.rankings{grid-template-columns:1fr;gap:0}
+.bloco{padding:12px;margin-bottom:12px}
+.cab-bloco{flex-wrap:wrap}
+table{font-size:13px}
+th,td{padding:8px 6px}
+svg.funil{min-width:560px}
+.login{margin:6vh auto;padding:22px}
+}
+@media (max-width:360px){.cartoes{grid-template-columns:1fr}}
 '@
 }
