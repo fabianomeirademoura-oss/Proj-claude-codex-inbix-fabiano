@@ -46,6 +46,20 @@ de erros no lugar dos números.
 - Para gerar novas senhas para todos: `criar_usuarios.cmd -Recriar`. Isso reescreve o `.env` e invalida as senhas anteriores.
 - Editar o `.env` à mão **não** muda nenhuma senha: o servidor só confere o hash em `usuarios.json`.
 
+## No celular
+
+O painel se ajusta à tela do celular:
+- O menu vira uma fileira de abas que rola de lado.
+- Os filtros ficam em duas colunas.
+- As tabelas largas rolam de lado dentro do próprio bloco.
+
+Ele também pode ser **instalado na tela inicial** como aplicativo (PWA). Ganha ícone próprio e abre em tela cheia, sem a barra do navegador:
+
+- **iPhone (Safari):** abra o endereço, toque em **Compartilhar** e depois em **Adicionar à Tela de Início**.
+- **Android (Chrome):** abra o endereço, toque no menu **⋮** e depois em **Instalar app** (ou **Adicionar à tela inicial**).
+
+O aplicativo instalado mostra sempre os números atuais, porque as telas vêm da internet a cada abertura. Ele guarda só o visual e os ícones. Sem conexão, aparece o aviso "Sem conexão", e nenhum dado fica gravado no telefone. No iPhone, o app instalado tem o próprio login, separado do Safari.
+
 ## Estrutura
 
 Em `app/`:

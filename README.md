@@ -60,7 +60,7 @@ painel-horizonte/
 ├── testes/              conferências independentes, teste de ponta a ponta e paridade Node × PowerShell
 ├── web/                 versão Node do painel, para a Vercel (espelho de app/; contas públicas em contas_publicas.json)
 ├── api/index.js         entrada da Vercel (chama web/app.js)
-├── public/              arquivos estáticos da Vercel (só robots.txt: nada de dados/ fica público sem login)
+├── public/              arquivos sem login: app instalável (manifesto, service worker, ícones, página offline) e robots.txt; nada de dados/
 ├── vercel.json          configuração da Vercel
 └── package.json         metadados da versão Node (sem dependências)
 ```
@@ -105,6 +105,7 @@ entra primeiro nela e depois é espelhada em `web/`, arquivo por arquivo
   nas variáveis de ambiente do projeto. Sem o segredo, só as contas públicas
   entram.
 - **Rodar a versão Node na máquina:** `node web/servidor.js 8090`.
+- **App instalável (PWA):** `public/` tem o manifesto, o service worker e os ícones. As duas versões servem a pasta igual. Os ícones saem de `node web/ferramentas/gerar_icones.js`. Como instalar no celular: [docs/PAINEL.md](docs/PAINEL.md), seção "No celular".
 
 ## Testes
 
@@ -120,7 +121,7 @@ mesmo nome em `testes\`.
 | `pwsh -NoProfile -File testes/conferir_importacao.ps1` | Importação de vendas e de estoque numa cópia temporária de `dados/`: resumo, gravação, reimportação, recusas | 70 conferências |
 | `pwsh -NoProfile -File testes/conferir_relatorio_diretoria.ps1` | Relatório semanal da diretoria: itens 1 a 5 contra as planilhas brutas e a §6, PDF e `calculo.json` idênticos em duas execuções, recusa de riscos inválidos, setembro importado | 237 conferências |
 | `pwsh -NoProfile -File testes/teste_e2e.ps1` | Sobe o servidor com contas temporárias, numa cópia temporária de `dados/`, e testa login, permissões, telas, CSV e importação por HTTP | 73 verificações |
-| `pwsh -NoProfile -File testes/paridade_node.ps1` | Sobe as versões PowerShell e Node lado a lado e compara status, tipo e corpo de 130 telas e CSV nas contas `teste`, vendedor e diretoria (precisa do `node`) | 1.598 verificações |
+| `pwsh -NoProfile -File testes/paridade_node.ps1` | Sobe as versões PowerShell e Node lado a lado e compara status, tipo e corpo de 130 telas e CSV nas contas `teste`, vendedor e diretoria, mais os arquivos de `public/` (precisa do `node`) | 1.659 verificações |
 
 As seis conferências somam **1.707** comparações. Todas devem terminar com
 "Todas as N … bateram". Nenhum teste grava nos dados reais: as conferências

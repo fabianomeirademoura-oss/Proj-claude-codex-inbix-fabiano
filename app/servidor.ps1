@@ -86,6 +86,20 @@ function Update-Estoque {
     else { Write-Host "Estoque carregado: foto de $($script:Estoque.DataBase.ToString('dd/MM/yyyy')), $($script:Estoque.Linhas.Count) linhas, $($script:Estoque.Produtos.Count) produtos." -ForegroundColor Green }
 }
 
+# App instalável (PWA): manifesto, service worker, ícones e página offline ficam em public/ e
+# são servidos como estão, sem login. A Vercel serve a mesma pasta direto (vercel.json).
+$script:DirPublico = Join-Path (Split-Path $PSScriptRoot -Parent) 'public'
+$script:TiposPublicos = @{ '.png' = 'image/png'; '.webmanifest' = 'application/manifest+json'; '.js' = 'text/javascript; charset=utf-8'; '.html' = 'text/html; charset=utf-8'; '.txt' = 'text/plain; charset=utf-8' }
+
+function Get-ArquivoPublico([string]$Caminho) {
+    if ($Caminho -notmatch '^/(?:[a-z0-9_-]+/)*[a-z0-9_-]+(\.[a-z]+)$') { return $null }
+    $tipo = $script:TiposPublicos[$Matches[1].ToLowerInvariant()]
+    if (-not $tipo) { return $null }
+    $p = Join-Path $script:DirPublico $Caminho.TrimStart('/')
+    if (-not (Test-Path -LiteralPath $p -PathType Leaf)) { return $null }
+    return [pscustomobject]@{ Caminho = $p; Tipo = $tipo }
+}
+
 function Get-DiasParado($Ctx) {
     # REGRAS_NEGOCIO.md §5.0: prazo escolhido na tela; vazio usa o padrão; inválido usa o padrão e avisa.
     $texto = [string]$Ctx.Request.QueryString['dias']
@@ -95,15 +109,16 @@ function Get-DiasParado($Ctx) {
     return @($script:DiasParadoPadrao, "Prazo inválido: use um número inteiro de 1 a $($script:DiasParadoMaximo) dias. Mostrando o padrão de $($script:DiasParadoPadrao) dias.")
 }
 
-function Send-Resposta($Ctx, [int]$Status, [string]$Tipo, [string]$Corpo, [switch]$ComBom) {
+function Send-Resposta($Ctx, [int]$Status, [string]$Tipo, [string]$Corpo, [switch]$ComBom, [byte[]]$Bytes) {
     $r = $Ctx.Response
     $r.StatusCode = $Status
     $r.ContentType = $Tipo
-    $r.Headers['Content-Security-Policy'] = "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+    # Script, imagem, manifesto e service worker só do próprio site (PWA); nada inline.
+    $r.Headers['Content-Security-Policy'] = "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; manifest-src 'self'; worker-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
     $r.Headers['X-Content-Type-Options'] = 'nosniff'
     $r.Headers['Referrer-Policy'] = 'no-referrer'
     $r.Headers['Cache-Control'] = 'no-store'
-    $bytes = [Text.Encoding]::UTF8.GetBytes($Corpo)
+    $bytes = if ($Bytes) { $Bytes } else { [Text.Encoding]::UTF8.GetBytes($Corpo) }
     if ($ComBom) { $bytes = [byte[]](0xEF, 0xBB, 0xBF) + $bytes }
     $r.ContentLength64 = $bytes.Length
     $r.OutputStream.Write($bytes, 0, $bytes.Length)
@@ -289,6 +304,10 @@ function Invoke-Requisicao($Ctx) {
     $metodo = $req.HttpMethod
 
     if ($caminho -eq '/estilo.css' -and $metodo -eq 'GET') { Send-Resposta $Ctx 200 'text/css; charset=utf-8' (Get-Css); return }
+    if ($metodo -eq 'GET') {
+        $pub = Get-ArquivoPublico $caminho
+        if ($pub) { Send-Resposta $Ctx 200 $pub.Tipo '' -Bytes ([IO.File]::ReadAllBytes($pub.Caminho)); return }
+    }
 
     $token = Get-TokenCookie $Ctx
     $sessao = Get-Sessao $token

@@ -112,6 +112,12 @@ try {
     Compare-Resposta 'sem login GET /' (Invoke-Http $PortaPs 'GET' '/') (Invoke-Http $PortaNode 'GET' '/')
     Compare-Resposta 'sem login GET /entrar' (Invoke-Http $PortaPs 'GET' '/entrar') (Invoke-Http $PortaNode 'GET' '/entrar')
     Compare-Resposta 'sem login GET /estilo.css' (Invoke-Http $PortaPs 'GET' '/estilo.css') (Invoke-Http $PortaNode 'GET' '/estilo.css')
+    # App instalável (PWA): arquivos de public/, sem login, e caminhos que não podem sair da pasta.
+    $publicos = @(Get-ChildItem -Recurse -File (Join-Path $raiz 'public') | ForEach-Object { '/' + [IO.Path]::GetRelativePath((Join-Path $raiz 'public'), $_.FullName).Replace('\', '/') })
+    foreach ($u in @($publicos) + @('/icones/nao-existe.png', '/../vercel.json', '/public/sw.js', '/sw.exe')) {
+        Compare-Resposta "sem login GET $u" (Invoke-Http $PortaPs 'GET' $u) (Invoke-Http $PortaNode 'GET' $u)
+    }
+    Confere "public/ tem manifesto, service worker e ícones ($($publicos.Count) arquivos)" ($publicos -contains '/manifest.webmanifest' -and $publicos -contains '/sw.js' -and $publicos -contains '/icones/icone-512.png')
     $f = Form @{ login = 'teste'; senha = 'errada' }
     Compare-Resposta 'login com senha errada' (Invoke-Http $PortaPs 'POST' '/entrar' $f) (Invoke-Http $PortaNode 'POST' '/entrar' $f)
     $f = Form @{ login = ' Alguém <x> '; senha = '' }
