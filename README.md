@@ -54,10 +54,12 @@ painel-horizonte/
 │   ├── atualizacoes/        planilhas de 19/09 para importar pela tela (NÃO lidas diretamente)
 │   └── importacoes/         criada na 1ª importação: arquivos confirmados, registro.csv e pendentes/
 ├── docs/
+│   ├── MCP.md               servidor MCP (só leitura) e como conectar no Claude Desktop
 │   ├── PAINEL.md            manual do painel: contas, telas e conferência no Excel
 │   └── RELATORIO_DIRETORIA.md  relatório semanal da diretoria em PDF
 ├── relatorios/          LOCAL: relatórios semanais gerados (fora do Git)
 ├── testes/              conferências independentes, teste de ponta a ponta e paridade Node × PowerShell
+├── mcp/                 servidor MCP só leitura para o Claude Desktop (usa as regras de web/lib/)
 ├── web/                 versão Node do painel, para a Vercel (espelho de app/; contas públicas em contas_publicas.json)
 ├── api/index.js         entrada da Vercel (chama web/app.js)
 ├── public/              arquivos estáticos da Vercel (só robots.txt: nada de dados/ fica público sem login)
@@ -120,6 +122,7 @@ mesmo nome em `testes\`.
 | `pwsh -NoProfile -File testes/conferir_importacao.ps1` | Importação de vendas e de estoque numa cópia temporária de `dados/`: resumo, gravação, reimportação, recusas | 70 conferências |
 | `pwsh -NoProfile -File testes/conferir_relatorio_diretoria.ps1` | Relatório semanal da diretoria: itens 1 a 5 contra as planilhas brutas e a §6, PDF e `calculo.json` idênticos em duas execuções, recusa de riscos inválidos, setembro importado | 237 conferências |
 | `pwsh -NoProfile -File testes/teste_e2e.ps1` | Sobe o servidor com contas temporárias, numa cópia temporária de `dados/`, e testa login, permissões, telas, CSV e importação por HTTP | 73 verificações |
+| `pwsh -NoProfile -File testes/conferir_mcp.ps1` | Servidor MCP pelo protocolo: vendedores, metas, pipeline, estoque e produtos contra a versão PowerShell e a §6, filtros e erros de entrada, numa cópia temporária de `dados/` (precisa do `node`) | 1.503 conferências |
 | `pwsh -NoProfile -File testes/paridade_node.ps1` | Sobe as versões PowerShell e Node lado a lado e compara status, tipo e corpo de 130 telas e CSV nas contas `teste`, vendedor e diretoria (precisa do `node`) | 1.598 verificações |
 
 As seis conferências somam **1.707** comparações. Todas devem terminar com
@@ -153,6 +156,7 @@ GitHub.
 | Origem do faturamento: vendas vinculadas ao CRM por `ID Oportunidade` | `/origem-vendas` | §0.1, §1 |
 | Importação de Excel só pela diretoria: vendas incrementais (upsert por `ID Venda`) e estoque substitutivo, com resumo e confirmação antes de gravar; recusa arquivo sem coluna obrigatória, dizendo qual | `/importar` | §9 |
 | Validação das planilhas, com lista de erros na tela no lugar dos números | todas as telas | §0.2, §2.6, §5, §7.5 |
+| Servidor MCP só leitura para o Claude Desktop: `consultar_vendedor`, `buscar_produto`, `ver_estoque`, `ver_meta` e `listar_oportunidades`, com respostas em JSON ([docs/MCP.md](docs/MCP.md)) | `mcp/servidor.js` | §1–§5, §7 |
 | Relatório semanal da diretoria em PDF: ranking, abaixo de 80%, pipeline por etapa, previsão vencida, maior saída e parados, e três riscos analisados pelo Claude Code ([docs/RELATORIO_DIRETORIA.md](docs/RELATORIO_DIRETORIA.md)) | `/relatorio-diretoria` no Claude Code, ou `app/relatorio_diretoria.ps1` | §1–§5, §7 |
 
 **O que o painel carrega:**
