@@ -37,10 +37,11 @@ de erros no lugar dos números.
 |---|---|
 | `diretoria` | Diretoria comercial |
 | e-mail de cada vendedor **ativo** (ex.: `joao.almeida@horizontemaquinas.com.br`) | Vendedor; vê a própria linha destacada |
+| `teste` (senha `teste`, divulgada aos alunos) | Leitura: vê todas as telas, não importa. Só existe na versão web (`web/contas_publicas.json`) |
 
 - Todos veem o painel completo.
 - Vendedor desligado não tem conta e, mesmo que tivesse, o login seria recusado (REGRAS_NEGOCIO.md §2.2).
-- Cinco senhas erradas seguidas bloqueiam o login por 5 minutos.
+- Cinco senhas erradas seguidas bloqueiam o login por 5 minutos. A conta `teste` não bloqueia: a senha dela é pública e o bloqueio travaria a turma inteira.
 - A sessão dura 8 horas.
 - Para gerar novas senhas para todos: `criar_usuarios.cmd -Recriar`. Isso reescreve o `.env` e invalida as senhas anteriores.
 - Editar o `.env` à mão **não** muda nenhuma senha: o servidor só confere o hash em `usuarios.json`.

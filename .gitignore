@@ -13,3 +13,7 @@ relatorios/
 
 # Arquivos do sistema
 .DS_Store
+
+# Vercel e Node
+.vercel/
+node_modules/

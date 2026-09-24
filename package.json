@@ -1,0 +1,9 @@
+{
+  "name": "painel-horizonte",
+  "private": true,
+  "description": "Painel comercial da Horizonte Máquinas: versão Node para a Vercel (a versão de referência é a PowerShell, em app/).",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node web/servidor.js"
+  }
+}
