@@ -28,7 +28,100 @@ function arquivosVendasImportados(dirImportacoes) {
 function assinaturaBase(dirDados, dirImportacoes) {
   const partes = Object.values(ARQUIVOS_BASE).map((n) => assinaturaArquivo(path.join(dirDados, n), n));
   for (const f of arquivosVendasImportados(dirImportacoes)) partes.push(assinaturaArquivo(f.caminho, f.nome));
-  return partes.join(';');
+  return [...partes, ...assinaturaAlteracoes(dirImportacoes)].join(';');
+}
+
+// ---------- Alterações de cadastro (REGRAS_NEGOCIO.md §11) ----------
+// O registro das alterações confirmadas é também o que se aplica por cima da base (§11.4):
+// cada linha põe o valor Novo no Campo do Registro, na ordem do arquivo.
+
+const COLUNAS_ALTERACOES = ['Quando', 'Lote', 'Login', 'Nome', 'Perfil', 'Ação', 'Tipo', 'Registro', 'Campo', 'Anterior', 'Novo'];
+// Colunas de produtos.xlsx: um produto cadastrado por alteração (§11.8) nasce com todas elas.
+const COLUNAS_PRODUTOS = ['ID Produto', 'Produto', 'Categoria', 'Marca', 'Modelo', 'Preço de Tabela', 'Custo Unitário', 'Unidade', 'Status'];
+
+function arquivoAlteracoes(dirImportacoes) { return dirImportacoes ? path.join(dirImportacoes, 'alteracoes.csv') : null; }
+
+function assinaturaAlteracoes(dirImportacoes) {
+  const arq = arquivoAlteracoes(dirImportacoes);
+  return arq && existe(arq) ? [assinaturaArquivo(arq, 'alteracoes.csv')] : [];
+}
+
+// Uma linha de CSV com ';', campos entre aspas e aspas dobradas (o que o Import-Csv do PowerShell lê).
+function camposCsv(linha) {
+  const campos = [];
+  let i = 0;
+  while (i <= linha.length) {
+    let valor = '';
+    if (linha[i] === '"') {
+      i++;
+      for (;;) {
+        const j = linha.indexOf('"', i);
+        if (j < 0) { valor += linha.slice(i); i = linha.length; break; }
+        valor += linha.slice(i, j);
+        if (linha[j + 1] === '"') { valor += '"'; i = j + 2; } else { i = j + 1; break; }
+      }
+      const fim = linha.indexOf(';', i);
+      if (fim < 0) i = linha.length + 1; else i = fim + 1;
+    } else {
+      const fim = linha.indexOf(';', i);
+      if (fim < 0) { valor = linha.slice(i); i = linha.length + 1; } else { valor = linha.slice(i, fim); i = fim + 1; }
+    }
+    campos.push(valor);
+  }
+  return campos;
+}
+
+function lerAlteracoes(dirImportacoes) {
+  const arq = arquivoAlteracoes(dirImportacoes);
+  if (!arq || !existe(arq)) return [];
+  const linhas = fs.readFileSync(arq, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l !== '');
+  if (!linhas.length) return [];
+  const cab = camposCsv(linhas[0]);
+  return linhas.slice(1).map((l) => {
+    const c = camposCsv(l);
+    const o = {};
+    cab.forEach((k, i) => { o[k] = c[i] ?? ''; });
+    return o;
+  });
+}
+
+// Registro de uma meta: "V003/2026-09" (vendedor/ano-mês).
+function chaveMeta(r) {
+  const ano = N.inteiro(r.Ano);
+  const mes = N.inteiro(r['Mês']);
+  if (!r['ID Vendedor'] || ano === null || mes === null) return null;
+  return `${r['ID Vendedor']}/${String(ano).padStart(4, '0')}-${String(mes).padStart(2, '0')}`;
+}
+
+// Aplica as alterações de um tipo às linhas lidas de uma planilha. Devolve as linhas em vigor.
+// colunas: colunas de uma linha nova (só produto e meta podem nascer de uma alteração).
+function mesclarAlteracoes(linhas, alteracoes, tipo, chave, colunas, erros) {
+  const lista = [...linhas];
+  const porChave = new Map();
+  for (const r of linhas) { const k = chave(r); if (k && !porChave.has(k)) porChave.set(k, r); }
+  const semMeta = new Map();
+  for (const a of alteracoes) {
+    if (a.Tipo !== tipo) continue;
+    let r = porChave.get(a.Registro);
+    if (!r) {
+      if (!colunas.length) { erros.push(`alteracoes.csv (${a.Lote}): ${tipo} '${a.Registro}' não existe`); continue; }
+      r = {};
+      for (const c of colunas) r[c] = '';
+      if (tipo === 'produto') r['ID Produto'] = a.Registro;
+      if (tipo === 'meta') {
+        const m = /^(.+)\/(\d{4})-(\d{2})$/.exec(a.Registro);
+        if (!m) { erros.push(`alteracoes.csv (${a.Lote}): meta '${a.Registro}' inválida`); continue; }
+        r['ID Vendedor'] = m[1]; r.Ano = String(parseInt(m[2], 10)); r['Mês'] = String(parseInt(m[3], 10));
+      }
+      r._Linha = 0;
+      lista.push(r);
+      porChave.set(a.Registro, r);
+    }
+    r[a.Campo] = a.Novo;
+    if (tipo === 'meta') semMeta.set(a.Registro, a.Novo === '');   // §11.7: valor vazio volta a "sem meta"
+  }
+  if (tipo === 'meta') return lista.filter((r) => { const k = chave(r); return !(k && semMeta.get(k)); });
+  return lista;
 }
 
 function mapaFiliais(caminhoVendedores) {
@@ -43,7 +136,8 @@ function mapaFiliais(caminhoVendedores) {
   return { idPorNome, nome, lista };
 }
 
-function carregarBaseComercial(dirDados, dirImportacoes, vendasAdicionais) {
+// alteracoesAdicionais: alterações ainda não gravadas, aplicadas depois do registro (só para validar antes de confirmar, §11.1).
+function carregarBaseComercial(dirDados, dirImportacoes, vendasAdicionais, alteracoesAdicionais) {
   const erros = [];
   const caminhos = {};
   for (const [chave, nome] of Object.entries(ARQUIVOS_BASE)) {
@@ -56,9 +150,12 @@ function carregarBaseComercial(dirDados, dirImportacoes, vendasAdicionais) {
   // Filiais: §0.2 — nome vira ID Filial; nome desconhecido é erro.
   const fil = mapaFiliais(caminhos.Vendedores);
 
+  // §11.4: alterações confirmadas por cima do cadastro e das metas (só com as importações, como o painel).
+  const alteracoes = [...lerAlteracoes(dirImportacoes), ...(alteracoesAdicionais || [])];
+
   const vendedores = [];
   const vendedorPorId = new Map();
-  for (const r of lerAba(caminhos.Vendedores, 'Vendedores')) {
+  for (const r of mesclarAlteracoes(lerAba(caminhos.Vendedores, 'Vendedores'), alteracoes, 'vendedor', (x) => x['ID Vendedor'], [], erros)) {
     const onde = `vendedores.xlsx, linha ${r._Linha}`;
     const id = r['ID Vendedor'];
     if (!id) { erros.push(`${onde}: ID Vendedor vazio`); continue; }
@@ -80,7 +177,7 @@ function carregarBaseComercial(dirDados, dirImportacoes, vendasAdicionais) {
   // Metas: uma linha por (vendedor, ano, mês). Ausência de linha = sem meta (§3.1).
   const metas = [];
   const chavesMeta = new Set();
-  for (const r of lerAba(caminhos.Metas, 'Metas')) {
+  for (const r of mesclarAlteracoes(lerAba(caminhos.Metas, 'Metas'), alteracoes, 'meta', chaveMeta, ['ID Vendedor', 'Vendedor', 'Ano', 'Mês', 'Meta (R$)'], erros)) {
     const onde = `metas_2026.xlsx, linha ${r._Linha}`;
     const id = r['ID Vendedor'];
     const ano = N.inteiro(r.Ano);
@@ -136,6 +233,7 @@ function carregarBaseComercial(dirDados, dirImportacoes, vendasAdicionais) {
   for (const v of vendas) if (dataBase === null || v.Data > dataBase) dataBase = v.Data;
   const arquivos = Object.keys(ARQUIVOS_BASE).map((k) => ({ Nome: path.basename(caminhos[k]), Modificado: fs.statSync(caminhos[k]).mtime }));
   for (const f of arquivosVendasImportados(dirImportacoes)) arquivos.push({ Nome: f.nome, Modificado: fs.statSync(f.caminho).mtime });
+  if (lerAlteracoes(dirImportacoes).length) arquivos.push({ Nome: 'alteracoes.csv', Modificado: fs.statSync(arquivoAlteracoes(dirImportacoes)).mtime });
 
   return { Erros: erros, Vendedores: vendedores, VendedorPorId: vendedorPorId, Metas: metas, Vendas: vendas, DataBase: dataBase, Arquivos: arquivos };
 }
@@ -234,6 +332,7 @@ function rankingAtingimento(d, incluirDesligados) {
 }
 
 module.exports = {
-  ANO_METAS, assinaturaBase, assinaturaArquivo, carregarBaseComercial, mapaFiliais, vendaRealizada, mesesDisponiveis,
+  ANO_METAS, COLUNAS_ALTERACOES, COLUNAS_PRODUTOS, arquivoAlteracoes, assinaturaAlteracoes, lerAlteracoes, camposCsv, chaveMeta, mesclarAlteracoes,
+  assinaturaBase, assinaturaArquivo, carregarBaseComercial, mapaFiliais, vendaRealizada, mesesDisponiveis,
   parcial, desempenho, detalheVendedor, rankingFaturamento, rankingAtingimento, existe,
 };

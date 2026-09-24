@@ -59,6 +59,7 @@ function layout(titulo, corpo, usuario, secao = 'vendas') {
     <a href="/pipeline"${ativo('pipeline')}>Pipeline</a>
     <a href="/funil"${ativo('funil')}>Funil</a>
     <a href="/estoque"${ativo('estoque')}>Estoque</a>
+    ${N.igual(usuario.perfil, 'diretoria') || N.igual(usuario.perfil, 'gerente') ? `<a href="/historico"${ativo('historico')}>Histórico</a>` : ''}
     ${N.igual(usuario.perfil, 'diretoria') ? `<a href="/importar"${ativo('importar')}>Importar</a>` : ''}
   </nav>
   <div class="usuario">${esc(usuario.nome)}

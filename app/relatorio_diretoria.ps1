@@ -43,7 +43,7 @@ function Stop-Relatorio([string]$Titulo, [string[]]$Erros, [int]$Codigo = 1) {
 # --- Carga, com as mesmas validações do painel (§0.2, §2.6, §5, §7.5).
 $comercial = Import-BaseComercial -DirDados $DirDados -DirImportacoes $dirImportacoes
 if ($comercial.Erros.Count) { Stop-Relatorio 'Vendas/metas com erros de importação; relatório não gerado:' $comercial.Erros }
-$pipeline = Import-BasePipeline -DirDados $DirDados -Comercial $comercial
+$pipeline = Import-BasePipeline -DirDados $DirDados -Comercial $comercial -DirImportacoes $dirImportacoes
 if ($pipeline.Erros.Count) { Stop-Relatorio 'CRM com erros de importação; relatório não gerado:' $pipeline.Erros }
 $estoque = Import-BaseEstoque -DirDados $DirDados -DirImportacoes $dirImportacoes
 if ($estoque.Erros.Count) { Stop-Relatorio 'Estoque com erros de importação; relatório não gerado:' $estoque.Erros }

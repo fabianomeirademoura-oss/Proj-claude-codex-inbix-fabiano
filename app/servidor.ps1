@@ -21,6 +21,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\PaginasEstoque.ps1')
 . (Join-Path $PSScriptRoot 'lib\RegrasImportacao.ps1')
 . (Join-Path $PSScriptRoot 'lib\PaginasImportacao.ps1')
+. (Join-Path $PSScriptRoot 'lib\PaginasHistorico.ps1')
 
 if (-not $DirDados) {
     $DirDados = if ($env:HORIZONTE_DADOS) { $env:HORIZONTE_DADOS } else { Join-Path (Split-Path $PSScriptRoot -Parent) 'dados' }
@@ -57,10 +58,10 @@ $script:AssinaturaPipeline = $null
 
 function Update-Pipeline {
     # CRM e clientes; depende do cadastro de vendedores, então recarrega também quando a base comercial muda.
-    $assinatura = "$(Get-AssinaturaPipeline $DirDados)#$($script:AssinaturaBase)"
+    $assinatura = "$(Get-AssinaturaPipeline $DirDados $script:DirImportacoes)#$($script:AssinaturaBase)"
     if ($assinatura -eq $script:AssinaturaPipeline) { return }
     try {
-        $script:Pipeline = Import-BasePipeline -DirDados $DirDados -Comercial $script:Base
+        $script:Pipeline = Import-BasePipeline -DirDados $DirDados -Comercial $script:Base -DirImportacoes $script:DirImportacoes
     } catch {
         $script:Pipeline = [pscustomobject]@{ Erros = @("Falha ao ler o CRM: $($_.Exception.Message)") }
     }
@@ -307,6 +308,21 @@ function Invoke-Requisicao($Ctx) {
     if ($caminho -eq '/importar' -or $caminho.StartsWith('/importar/')) { Invoke-Importacao $Ctx $sessao.Usuario $caminho $metodo; return }
     if ($metodo -ne 'GET') { Send-Resposta $Ctx 405 'text/plain; charset=utf-8' 'Método não permitido'; return }
     $usuario = $sessao.Usuario
+
+    if ($caminho -eq '/historico' -or $caminho -eq '/historico.csv') {
+        # REGRAS_NEGOCIO.md §11.3: diretoria e gerentes. O registro é lido a cada pedido (só acréscimos).
+        if (-not (Test-PodeVerHistorico $usuario)) { Send-Resposta $Ctx 403 'text/html; charset=utf-8' (New-PaginaSemAcessoHistorico $usuario); return }
+        $tipo = [string]$req.QueryString['tipo']
+        if ($tipo -cnotin @($script:TiposAlteracao.Keys)) { $tipo = '' }
+        $registro = ([string]$req.QueryString['registro']).Trim()
+        $alteracoes = @(Read-Alteracoes $script:DirImportacoes | Where-Object { $_ })
+        if ($caminho -eq '/historico') { Send-Resposta $Ctx 200 'text/html; charset=utf-8' (New-PaginaHistorico $alteracoes $tipo $registro $usuario) }
+        else {
+            $Ctx.Response.AddHeader('Content-Disposition', 'attachment; filename="historico_alteracoes.csv"')
+            Send-Resposta $Ctx 200 'text/csv; charset=utf-8' (New-CsvHistorico $alteracoes $tipo $registro) -ComBom
+        }
+        return
+    }
 
     Update-Base
     $base = $script:Base

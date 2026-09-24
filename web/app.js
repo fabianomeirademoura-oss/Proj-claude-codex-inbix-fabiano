@@ -12,6 +12,7 @@ const A = require('./lib/auth');
 const P = require('./lib/paginas');
 const PP = require('./lib/paginas_pipeline');
 const PE = require('./lib/paginas_estoque');
+const PH = require('./lib/paginas_historico');
 
 const DIR_DADOS = process.env.HORIZONTE_DADOS || path.join(__dirname, '..', 'dados');
 const DIR_IMPORTACOES = path.join(DIR_DADOS, 'importacoes');   // §9.8: importações confirmadas, se existirem
@@ -32,9 +33,9 @@ function atualizarBase() {
 }
 function atualizarPipeline() {
   const base = atualizarBase();
-  const a = `${RP.assinaturaPipeline(DIR_DADOS)}#${cache.aBase}`;
+  const a = `${RP.assinaturaPipeline(DIR_DADOS, DIR_IMPORTACOES)}#${cache.aBase}`;
   if (a === cache.aPipeline) return cache.pipeline;
-  try { cache.pipeline = RP.carregarBasePipeline(DIR_DADOS, base); } catch (e) { cache.pipeline = { Erros: [`Falha ao ler o CRM: ${e.message}`] }; }
+  try { cache.pipeline = RP.carregarBasePipeline(DIR_DADOS, base, DIR_IMPORTACOES); } catch (e) { cache.pipeline = { Erros: [`Falha ao ler o CRM: ${e.message}`] }; }
   cache.aPipeline = a;
   return cache.pipeline;
 }
@@ -202,6 +203,17 @@ async function tratar(req, res) {
   const usuario = sessao.Usuario;
   if (caminho === '/importar' || caminho.startsWith('/importar/')) return importacao(res, usuario);
   if (metodo !== 'GET') return responder(res, 405, TEXTO, 'Método não permitido');
+
+  if (caminho === '/historico' || caminho === '/historico.csv') {
+    // §11.3: diretoria e gerentes. O registro é lido a cada pedido (só acréscimos). Na Vercel não há registro.
+    if (!PH.podeVerHistorico(usuario)) return responder(res, 403, HTML, PH.paginaSemAcessoHistorico(usuario));
+    let tipo = q('tipo') || '';
+    if (!Object.prototype.hasOwnProperty.call(PH.TIPOS_ALTERACAO, tipo)) tipo = '';
+    const registro = (q('registro') || '').trim();
+    const alteracoes = R.lerAlteracoes(DIR_IMPORTACOES);
+    if (caminho === '/historico') return responder(res, 200, HTML, PH.paginaHistorico(alteracoes, tipo, registro, usuario));
+    return responder(res, 200, 'text/csv; charset=utf-8', PH.csvHistorico(alteracoes, tipo, registro), { bom: true, disposicao: 'attachment; filename="historico_alteracoes.csv"' });
+  }
 
   const base = atualizarBase();
   if (base.Erros.length) return responder(res, 500, HTML, P.paginaErroImportacao(base.Erros, usuario));

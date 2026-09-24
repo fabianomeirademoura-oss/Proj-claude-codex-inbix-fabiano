@@ -39,7 +39,7 @@ function Get-AssinaturaEstoque([string]$DirDados, [string]$DirImportacoes) {
         if (Test-Path -LiteralPath $p) { $f = Get-Item -LiteralPath $p; "$nome|$($f.LastWriteTimeUtc.Ticks)|$($f.Length)" } else { "$nome|ausente" }
     }
     $partes = @($partes) + @(Get-FotosEstoque $DirDados $DirImportacoes | ForEach-Object { "$($_.Arquivo.FullName)|$($_.Arquivo.LastWriteTimeUtc.Ticks)|$($_.Arquivo.Length)" })
-    return ($partes -join ';')
+    return (@($partes) + @(Get-AssinaturaAlteracoes $DirImportacoes) -join ';')
 }
 
 function ConvertTo-Quantidade([string]$Texto) {
@@ -77,7 +77,9 @@ function Import-BaseEstoque {
     # Catálogo
     $produtos = New-Object Collections.Generic.List[object]
     $produtoPorId = @{}
-    foreach ($r in (Read-XlsxSheet (Join-Path $DirDados 'produtos.xlsx') 'Produtos')) {
+    # §11.4: produtos cadastrados ou editados por alteração confirmada valem por cima do catálogo.
+    $linhasProdutos = Merge-Alteracoes (Read-XlsxSheet (Join-Path $DirDados 'produtos.xlsx') 'Produtos') (Read-Alteracoes $DirImportacoes) 'produto' { param($r) $r.'ID Produto' } $script:ColunasProdutos $erros
+    foreach ($r in $linhasProdutos) {
         $onde = "produtos.xlsx, linha $($r._Linha)"
         $id = $r.'ID Produto'
         if (-not $id) { $erros.Add("${onde}: ID Produto vazio"); continue }

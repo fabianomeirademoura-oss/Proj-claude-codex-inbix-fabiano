@@ -9,12 +9,12 @@ $script:ArquivosPipeline = @('crm_oportunidades.xlsx', 'clientes.xlsx', 'vendedo
 # REGRAS_NEGOCIO.md §8: ordem do funil, de cima para baixo. Etapa aberta fora desta lista entra depois, pela probabilidade.
 $script:EtapasFunil = @('Prospecção', 'Qualificação', 'Proposta Enviada', 'Negociação')
 
-function Get-AssinaturaPipeline([string]$DirDados) {
+function Get-AssinaturaPipeline([string]$DirDados, [string]$DirImportacoes) {
     $partes = foreach ($nome in $script:ArquivosPipeline) {
         $p = Join-Path $DirDados $nome
         if (Test-Path -LiteralPath $p) { $f = Get-Item -LiteralPath $p; "$nome|$($f.LastWriteTimeUtc.Ticks)|$($f.Length)" } else { "$nome|ausente" }
     }
-    return ($partes -join ';')
+    return (@($partes) + @(Get-AssinaturaAlteracoes $DirImportacoes) -join ';')
 }
 
 function Test-OportunidadeAberta([string]$Etapa) {
@@ -25,7 +25,9 @@ function Test-OportunidadeAberta([string]$Etapa) {
 function Import-BasePipeline {
     param(
         [Parameter(Mandatory)][string]$DirDados,
-        [Parameter(Mandatory)]$Comercial   # base de Regras.ps1, já sem erros: fornece o cadastro de vendedores
+        [Parameter(Mandatory)]$Comercial,   # base de Regras.ps1, já sem erros: fornece o cadastro de vendedores
+        # §11.4: quando informado, as alterações confirmadas (produtos e donos das oportunidades) valem por cima da base.
+        [string]$DirImportacoes
     )
     $erros = New-Object Collections.Generic.List[string]
     $caminhos = @{}
@@ -47,8 +49,9 @@ function Import-BasePipeline {
     }
 
     # Produtos: só o necessário para a categoria do funil (§8.4). A chave é o ID.
+    $alteracoes = Read-Alteracoes $DirImportacoes
     $produtoPorId = @{}
-    foreach ($r in (Read-XlsxSheet $caminhos['produtos.xlsx'] 'Produtos')) {
+    foreach ($r in (Merge-Alteracoes (Read-XlsxSheet $caminhos['produtos.xlsx'] 'Produtos') $alteracoes 'produto' { param($r) $r.'ID Produto' } $script:ColunasProdutos $erros)) {
         if ($r.'ID Produto') { $produtoPorId[$r.'ID Produto'] = [pscustomobject]@{ Id = $r.'ID Produto'; Nome = $r.Produto; Categoria = $r.Categoria } }
     }
 
@@ -75,7 +78,7 @@ function Import-BasePipeline {
     # Oportunidades
     $oportunidades = New-Object Collections.Generic.List[object]
     $ids = @{}
-    foreach ($r in (Read-XlsxSheet $caminhos['crm_oportunidades.xlsx'] 'Oportunidades')) {
+    foreach ($r in (Merge-Alteracoes (Read-XlsxSheet $caminhos['crm_oportunidades.xlsx'] 'Oportunidades') $alteracoes 'oportunidade' { param($r) $r.'ID Oportunidade' } @() $erros)) {
         $onde = "crm_oportunidades.xlsx, linha $($r._Linha)"
         $id = $r.'ID Oportunidade'
         if (-not $id) { $erros.Add("${onde}: ID Oportunidade vazio"); continue }

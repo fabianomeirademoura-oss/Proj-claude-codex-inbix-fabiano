@@ -36,6 +36,7 @@ de erros no lugar dos números.
 | Login | Perfil |
 |---|---|
 | `diretoria` | Diretoria comercial |
+| `gerente.cascavel`, `gerente.chapeco`, `gerente.passofundo` | Gerente comercial da filial (nome da aba `Filiais`). Vê o painel e o Histórico; pelo Claude Desktop, altera só a própria filial (REGRAS_NEGOCIO.md §11.2) |
 | e-mail de cada vendedor **ativo** (ex.: `joao.almeida@horizontemaquinas.com.br`) | Vendedor; vê a própria linha destacada |
 | `teste` (senha `teste`, divulgada aos alunos) | Leitura: vê todas as telas, não importa. Só existe na versão web (`web/contas_publicas.json`) |
 
@@ -44,6 +45,7 @@ de erros no lugar dos números.
 - Cinco senhas erradas seguidas bloqueiam o login por 5 minutos. A conta `teste` não bloqueia: a senha dela é pública e o bloqueio travaria a turma inteira.
 - A sessão dura 8 horas.
 - Para gerar novas senhas para todos: `criar_usuarios.cmd -Recriar`. Isso reescreve o `.env` e invalida as senhas anteriores.
+- Para criar só as contas que faltam (os gerentes, num `usuarios.json` antigo, ou um vendedor reativado): `criar_usuarios.cmd -Completar`. As contas e senhas existentes não mudam; as novas senhas vão para o fim do `.env`.
 - Editar o `.env` à mão **não** muda nenhuma senha: o servidor só confere o hash em `usuarios.json`.
 
 ## Estrutura
@@ -63,6 +65,7 @@ Em `app/`:
 | `lib/Paginas.ps1` | HTML e CSV. Só formata. |
 | `lib/RegrasImportacao.ps1` | **Regras da importação (REGRAS_NEGOCIO.md §9):** colunas obrigatórias, validação, resumo (novas, atualizadas, ignoradas; foto substituída), pendência até a confirmação e gravação em `dados/importacoes/`. |
 | `lib/PaginasImportacao.ps1` | HTML da tela "Importar". Só formata. |
+| `lib/PaginasHistorico.ps1` | HTML e CSV da tela "Histórico" (alterações feitas pelo Claude Desktop, REGRAS_NEGOCIO.md §11). Só formata; o registro é lido e aplicado em `Regras.ps1` (`Read-Alteracoes`, `Merge-Alteracoes`). |
 | `servidor.ps1` | Rotas HTTP, restritas a `localhost`. |
 | `iniciar.cmd`, `criar_usuarios.cmd/.ps1` | Atalhos para subir o servidor e criar as contas. |
 
@@ -230,6 +233,20 @@ REGRAS_NEGOCIO.md §9.
 - Cada importação confirmada fica em `dados/importacoes/registro.csv` e aparece no histórico da tela.
 - Para desfazer, retire o arquivo da pasta de importações.
 - Arquivos enviados e não confirmados ficam em `dados/importacoes/pendentes/` e são descartados depois de 24 h. A confirmação só vale por 2 h.
+
+### Histórico de alterações (página "Histórico")
+
+As alterações de cadastro feitas pelas ferramentas de escrita do Claude Desktop
+(inativar e reativar vendedor, alterar meta, cadastrar ou editar produto,
+transferir oportunidades; [MCP.md](MCP.md)) aparecem aqui. O link
+**Histórico** aparece para a diretoria e os gerentes; as outras contas recebem
+"Sem acesso". As regras estão no REGRAS_NEGOCIO.md §11.
+
+- Uma linha por campo alterado: quando, quem (nome, login e perfil), a ação, o registro (ex.: `V011`, `V003/2026-10`, `P066`, `OP-0130`), o campo, o valor anterior e o novo. O **lote** junta os campos confirmados de uma vez.
+- Da alteração mais recente para a mais antiga, com filtro por tipo e por registro, e **Baixar CSV**.
+- O registro fica em `dados/importacoes/alteracoes.csv`, só com acréscimos. Ele é também o que o painel aplica por cima das planilhas originais, que não mudam (§11.4). Por isso as telas mostram a situação depois das alterações, e o arquivo aparece na lista de fontes da tela Vendas e metas.
+- **Desfazer** é outra alteração (ex.: reativar quem foi inativado), que também fica no histórico. Não edite o arquivo à mão.
+- Na versão publicada na Vercel a tela fica vazia: a internet não tem disco para gravar alterações.
 
 **Aula 6:** importe `dados/atualizacoes/vendas_2026_setembro.xlsx` como vendas (82 novas, R$ 3.850.268,28 faturados) e `dados/atualizacoes/estoque_2026-09-19.xlsx` como estoque (195 linhas substituídas, 61 quantidades mudam). Importar setembro de novo dá 0 novas e 82 ignoradas.
 

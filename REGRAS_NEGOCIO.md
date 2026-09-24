@@ -396,3 +396,51 @@ primeiro e depois o código).
      das planilhas).
 7. **Repetibilidade:** os mesmos dados geram os mesmos itens 1 a 5. Nada no
    relatório depende do relógio (§0.3).
+
+---
+
+## 11. Alterações de cadastro (ferramentas de escrita do MCP)
+
+Decisões do coordenador em 24/09/2026 (PR #8). Vale para as cinco ferramentas
+de escrita do servidor MCP (`docs/MCP.md`): inativar e reativar vendedor,
+alterar meta, cadastrar ou editar produto e transferir oportunidades. A leitura
+continua livre.
+
+1. **Confirmação.** Nenhuma alteração é gravada sem confirmação.
+   - A ferramenta primeiro devolve o que vai mudar, campo a campo (valor atual → valor novo), os efeitos (ex.: oportunidades que viram órfãs) e um código de confirmação. Nada é gravado nessa etapa.
+   - A gravação só acontece quando a pessoa confirma, com esse código.
+   - A confirmação refaz todas as validações. Se os dados mudaram nesse meio tempo e a alteração ficou diferente, nada é gravado e a ferramenta mostra o novo resumo, como na importação (§9.5).
+   - O código vale só para quem o pediu, só uma vez e por 15 minutos.
+   - A alteração só é aceita se a base continuar válida depois dela: ela passa pelas mesmas validações da carga (§0.2, §2.6, §5, §7.5). Não existe gravação parcial.
+2. **Permissão.** Só escreve quem tem perfil **gerente** ou **diretoria**.
+   - **Diretoria:** qualquer alteração.
+   - **Gerente:** cada um dos três gerentes comerciais (aba `Filiais` de `vendedores.xlsx`) tem uma conta com perfil `gerente`, ligada à sua filial. Ele altera vendedores, metas e oportunidades só da **própria filial**, pela filial do vendedor no cadastro (como §4.2). Numa transferência, os dois vendedores têm de ser da filial dele. O catálogo de produtos é único: qualquer gerente pode cadastrar ou editar produto.
+   - **Vendedor e leitura:** só leem.
+   - No MCP, a conta é a configurada no Claude Desktop (`docs/MCP.md`). Sem conta configurada, as ferramentas de escrita recusam.
+3. **Registro.** Toda alteração confirmada grava, **por campo alterado**: quando, quem (login, nome e perfil), a ação, o tipo e o ID do registro, o campo, o valor anterior e o valor novo.
+   - O registro fica em `dados/importacoes/alteracoes.csv`, só com acréscimos: nada é apagado nem reescrito (§0.6).
+   - A tela **Histórico** (`/historico`) mostra o registro, da alteração mais recente para a mais antiga, para diretoria e gerentes. A ferramenta `ver_historico` mostra o mesmo no MCP.
+4. **Aplicação.**
+   - As planilhas originais de `dados/` nunca são alteradas (§9.7). O painel aplica o registro por cima da base, na ordem em que foi gravado, junto com as importações (§9.8): cada linha põe o valor novo no campo daquele registro.
+   - Desfazer é outra alteração, também registrada (ex.: reativar quem foi inativado), e não uma edição do arquivo.
+   - As conferências (§6) continuam sobre a base, sem importações nem alterações (§9.9).
+5. **Inativar vendedor** (§2):
+   - Exige a data de desligamento. Ela não pode ser anterior à admissão, à última venda do vendedor (faturada ou cancelada) nem à criação da última oportunidade dele (§2.6).
+   - Status passa a `Inativo`, com a data. O vendedor perde o acesso ao painel (§2.2).
+   - As metas dos meses **depois** do mês do desligamento passam a "sem meta" (§3.1), para não inflar a meta da filial e da empresa (§4.2). Cada meta removida aparece no resumo e no registro.
+   - As oportunidades abertas dele viram órfãs (§2.4) e não são transferidas automaticamente.
+6. **Reativar vendedor:** Status volta a `Ativo` e a data de desligamento fica em branco (a anterior continua no registro). As metas removidas não voltam sozinhas: use alterar meta. As órfãs dele deixam de ser órfãs. O acesso ao painel exige uma conta: rode `app/criar_usuarios.ps1 -Completar`.
+7. **Alterar meta** (§3, §4):
+   - Só nos **meses abertos**: do mês da data-base de vendas (§0.3) até dezembro de 2026. Os meses já fechados não mudam, para o atingimento apurado não mudar depois.
+   - O valor novo é maior que zero, em reais com até 2 casas. Meta zero é recusada. "Sem meta" é pedido explicitamente e remove a meta do mês (§3.1).
+   - Pode criar meta num mês que não tinha. Não pode dar meta a vendedor desligado nos meses depois do desligamento.
+8. **Cadastrar ou editar produto** (§5):
+   - Produto novo recebe o próximo código livre (`P` + 3 dígitos) e exige nome, categoria, preço de tabela e unidade. O status padrão é `Ativo`.
+   - Na edição, só mudam os campos informados.
+   - A categoria tem de ser uma das que já existem no catálogo. Categoria nova é combinada antes com o coordenador.
+   - Status é `Ativo` ou `Descontinuado` (§5.5). Preço de tabela e custo unitário são ≥ 0, com até 2 casas.
+   - O produto novo não tem linha de estoque e por isso aparece em "sem estoque" (§5) até a próxima foto.
+9. **Transferir oportunidades** (§2.4, §3.4, §7):
+   - Só oportunidades **abertas**. O destino é um vendedor **ativo** e diferente do dono atual.
+   - Sem lista de oportunidades, transfere todas as abertas do dono atual.
+   - Muda só o `ID Vendedor` (o dono atual). A oportunidade passa para a filial do novo dono nas visões por filial (§8.4).

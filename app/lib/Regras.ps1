@@ -45,7 +45,77 @@ function Get-AssinaturaBase([string]$DirDados, [string]$DirImportacoes) {
         if (Test-Path -LiteralPath $p) { $f = Get-Item -LiteralPath $p; "$nome|$($f.LastWriteTimeUtc.Ticks)|$($f.Length)" } else { "$nome|ausente" }
     }
     $partes = @($partes) + @(Get-ArquivosVendasImportados $DirImportacoes | ForEach-Object { "$($_.Name)|$($_.LastWriteTimeUtc.Ticks)|$($_.Length)" })
-    return ($partes -join ';')
+    return (@($partes) + @(Get-AssinaturaAlteracoes $DirImportacoes) -join ';')
+}
+
+# ---------- Alterações de cadastro (REGRAS_NEGOCIO.md §11) ----------
+# O registro das alterações confirmadas é também o que se aplica por cima da base (§11.4):
+# cada linha põe o valor Novo no Campo do Registro, na ordem do arquivo.
+
+$script:ColunasAlteracoes = @('Quando', 'Lote', 'Login', 'Nome', 'Perfil', 'Ação', 'Tipo', 'Registro', 'Campo', 'Anterior', 'Novo')
+# Colunas de produtos.xlsx: um produto cadastrado por alteração (§11.8) nasce com todas elas.
+$script:ColunasProdutos = @('ID Produto', 'Produto', 'Categoria', 'Marca', 'Modelo', 'Preço de Tabela', 'Custo Unitário', 'Unidade', 'Status')
+
+function Get-ArquivoAlteracoes([string]$DirImportacoes) {
+    if (-not $DirImportacoes) { return $null }
+    return (Join-Path $DirImportacoes 'alteracoes.csv')
+}
+
+function Get-AssinaturaAlteracoes([string]$DirImportacoes) {
+    $arq = Get-ArquivoAlteracoes $DirImportacoes
+    if (-not $arq -or -not (Test-Path -LiteralPath $arq)) { return @() }
+    $f = Get-Item -LiteralPath $arq
+    return "alteracoes.csv|$($f.LastWriteTimeUtc.Ticks)|$($f.Length)"
+}
+
+function Read-Alteracoes([string]$DirImportacoes) {
+    $arq = Get-ArquivoAlteracoes $DirImportacoes
+    if (-not $arq -or -not (Test-Path -LiteralPath $arq)) { return @() }
+    return @(Import-Csv -LiteralPath $arq -Delimiter ';' -Encoding UTF8)
+}
+
+function Get-ChaveMeta($Linha) {
+    # Registro de uma meta: "V003/2026-09" (vendedor/ano-mês).
+    $ano = ConvertTo-Inteiro $Linha.Ano
+    $mes = ConvertTo-Inteiro $Linha.'Mês'
+    if (-not $Linha.'ID Vendedor' -or $null -eq $ano -or $null -eq $mes) { return $null }
+    return '{0}/{1:0000}-{2:00}' -f $Linha.'ID Vendedor', $ano, $mes
+}
+
+function Merge-Alteracoes {
+    # Aplica as alterações de um tipo às linhas lidas de uma planilha. Devolve as linhas em vigor.
+    # $Colunas: colunas de uma linha nova (só produto e meta podem nascer de uma alteração).
+    param($Linhas, $Alteracoes, [string]$Tipo, [scriptblock]$Chave, [string[]]$Colunas, $Erros)
+    $lista = New-Object Collections.Generic.List[object]
+    $porChave = New-Object Collections.Hashtable ([StringComparer]::Ordinal)
+    foreach ($r in $Linhas) {
+        $lista.Add($r)
+        $k = & $Chave $r
+        if ($k -and -not $porChave.ContainsKey($k)) { $porChave[$k] = $r }
+    }
+    $semMeta = New-Object Collections.Hashtable ([StringComparer]::Ordinal)
+    foreach ($a in @($Alteracoes | Where-Object { $_.Tipo -ceq $Tipo })) {
+        $r = $porChave[$a.Registro]
+        if (-not $r) {
+            if (-not $Colunas) { $Erros.Add("alteracoes.csv ($($a.Lote)): $Tipo '$($a.Registro)' não existe"); continue }
+            $nova = [ordered]@{}
+            foreach ($c in $Colunas) { $nova[$c] = '' }
+            if ($Tipo -eq 'produto') { $nova['ID Produto'] = $a.Registro }
+            if ($Tipo -eq 'meta') {
+                if ($a.Registro -notmatch '^(.+)/(\d{4})-(\d{2})$') { $Erros.Add("alteracoes.csv ($($a.Lote)): meta '$($a.Registro)' inválida"); continue }
+                $nova['ID Vendedor'] = $Matches[1]; $nova['Ano'] = [string][int]$Matches[2]; $nova['Mês'] = [string][int]$Matches[3]
+            }
+            $nova['_Linha'] = 0
+            $r = [pscustomobject]$nova
+            $lista.Add($r)
+            $porChave[$a.Registro] = $r
+        }
+        if ($r.PSObject.Properties[$a.Campo]) { $r.($a.Campo) = $a.Novo } else { $r | Add-Member -NotePropertyName $a.Campo -NotePropertyValue $a.Novo }
+        # §11.7: meta com valor novo vazio volta a "sem meta" (a linha deixa de existir).
+        if ($Tipo -eq 'meta') { $semMeta[$a.Registro] = ($a.Novo -eq '') }
+    }
+    if ($Tipo -eq 'meta') { return @($lista | Where-Object { $k = & $Chave $_; -not ($k -and $semMeta[$k]) }) }
+    return $lista.ToArray()
 }
 
 function Import-BaseComercial {
@@ -75,10 +145,14 @@ function Import-BaseComercial {
         $nomeFilial[$f.'ID Filial'] = $f.Filial
     }
 
+    # §11.4: alterações confirmadas por cima do cadastro e das metas (só com as importações, como o painel).
+    $alteracoes = Read-Alteracoes $DirImportacoes
+
     # Vendedores
     $vendedores = New-Object Collections.Generic.List[object]
     $vendedorPorId = @{}
-    foreach ($r in (Read-XlsxSheet $caminhos.Vendedores 'Vendedores')) {
+    $linhasVendedores = Merge-Alteracoes (Read-XlsxSheet $caminhos.Vendedores 'Vendedores') $alteracoes 'vendedor' { param($r) $r.'ID Vendedor' } @() $erros
+    foreach ($r in $linhasVendedores) {
         $onde = "vendedores.xlsx, linha $($r._Linha)"
         $id = $r.'ID Vendedor'
         if (-not $id) { $erros.Add("${onde}: ID Vendedor vazio"); continue }
@@ -107,7 +181,8 @@ function Import-BaseComercial {
     # Metas: uma linha por (vendedor, ano, mês). Ausência de linha = sem meta (§3.1).
     $metas = New-Object Collections.Generic.List[object]
     $chavesMeta = @{}
-    foreach ($r in (Read-XlsxSheet $caminhos.Metas 'Metas')) {
+    $linhasMetas = Merge-Alteracoes (Read-XlsxSheet $caminhos.Metas 'Metas') $alteracoes 'meta' { param($r) Get-ChaveMeta $r } @('ID Vendedor', 'Vendedor', 'Ano', 'Mês', 'Meta (R$)') $erros
+    foreach ($r in $linhasMetas) {
         $onde = "metas_2026.xlsx, linha $($r._Linha)"
         $id = $r.'ID Vendedor'
         $ano = ConvertTo-Inteiro $r.Ano
@@ -179,6 +254,10 @@ function Import-BaseComercial {
         [pscustomobject]@{ Nome = $f.Name; Caminho = $f.FullName; Modificado = $f.LastWriteTime }
     }
     $arquivos = @($arquivos) + @(Get-ArquivosVendasImportados $DirImportacoes | ForEach-Object { [pscustomobject]@{ Nome = $_.Name; Caminho = $_.FullName; Modificado = $_.LastWriteTime } })
+    if ($alteracoes.Count) {
+        $f = Get-Item -LiteralPath (Get-ArquivoAlteracoes $DirImportacoes)
+        $arquivos = @($arquivos) + @([pscustomobject]@{ Nome = $f.Name; Caminho = $f.FullName; Modificado = $f.LastWriteTime })
+    }
 
     return [pscustomobject]@{
         Erros         = $erros.ToArray()

@@ -59,7 +59,7 @@ painel-horizonte/
 │   └── RELATORIO_DIRETORIA.md  relatório semanal da diretoria em PDF
 ├── relatorios/          LOCAL: relatórios semanais gerados (fora do Git)
 ├── testes/              conferências independentes, teste de ponta a ponta e paridade Node × PowerShell
-├── mcp/                 servidor MCP só leitura para o Claude Desktop (usa as regras de web/lib/)
+├── mcp/                 servidor MCP para o Claude Desktop: leitura e escrita com confirmação (usa as regras de web/lib/)
 ├── web/                 versão Node do painel, para a Vercel (espelho de app/; contas públicas em contas_publicas.json)
 ├── api/index.js         entrada da Vercel (chama web/app.js)
 ├── public/              arquivos estáticos da Vercel (só robots.txt: nada de dados/ fica público sem login)
@@ -123,7 +123,8 @@ mesmo nome em `testes\`.
 | `pwsh -NoProfile -File testes/conferir_relatorio_diretoria.ps1` | Relatório semanal da diretoria: itens 1 a 5 contra as planilhas brutas e a §6, PDF e `calculo.json` idênticos em duas execuções, recusa de riscos inválidos, setembro importado | 237 conferências |
 | `pwsh -NoProfile -File testes/teste_e2e.ps1` | Sobe o servidor com contas temporárias, numa cópia temporária de `dados/`, e testa login, permissões, telas, CSV e importação por HTTP | 73 verificações |
 | `pwsh -NoProfile -File testes/conferir_mcp.ps1` | Servidor MCP pelo protocolo: vendedores, metas, pipeline, estoque e produtos contra a versão PowerShell e a §6, filtros e erros de entrada, numa cópia temporária de `dados/` (precisa do `node`) | 1.503 conferências |
-| `pwsh -NoProfile -File testes/paridade_node.ps1` | Sobe as versões PowerShell e Node lado a lado e compara status, tipo e corpo de 130 telas e CSV nas contas `teste`, vendedor e diretoria (precisa do `node`) | 1.598 verificações |
+| `pwsh -NoProfile -File testes/conferir_escrita_mcp.ps1` | Ferramentas de escrita do MCP (§11): permissões, recusas, nada gravado antes da confirmação, código de uso único, confirmação que refaz a validação, registro linha a linha e aplicação pela versão PowerShell, numa cópia temporária (precisa do `node`) | 226 conferências |
+| `pwsh -NoProfile -File testes/paridade_node.ps1` | Sobe as versões PowerShell e Node lado a lado e compara status, tipo e corpo de 139 telas e CSV nas contas `teste`, vendedor, gerente e diretoria, em dois cenários: a base e a base com um registro de alterações (precisa do `node`) | 4.547 verificações |
 
 As seis conferências somam **1.707** comparações. Todas devem terminar com
 "Todas as N … bateram". Nenhum teste grava nos dados reais: as conferências
@@ -156,7 +157,9 @@ GitHub.
 | Origem do faturamento: vendas vinculadas ao CRM por `ID Oportunidade` | `/origem-vendas` | §0.1, §1 |
 | Importação de Excel só pela diretoria: vendas incrementais (upsert por `ID Venda`) e estoque substitutivo, com resumo e confirmação antes de gravar; recusa arquivo sem coluna obrigatória, dizendo qual | `/importar` | §9 |
 | Validação das planilhas, com lista de erros na tela no lugar dos números | todas as telas | §0.2, §2.6, §5, §7.5 |
-| Servidor MCP só leitura para o Claude Desktop: `consultar_vendedor`, `buscar_produto`, `ver_estoque`, `ver_meta` e `listar_oportunidades`, com respostas em JSON ([docs/MCP.md](docs/MCP.md)) | `mcp/servidor.js` | §1–§5, §7 |
+| Servidor MCP para o Claude Desktop, com respostas em JSON ([docs/MCP.md](docs/MCP.md)). Leitura: `consultar_vendedor`, `buscar_produto`, `ver_estoque`, `ver_meta`, `listar_oportunidades` e `ver_historico`. Escrita: `inativar_vendedor`, `reativar_vendedor`, `alterar_meta`, `cadastrar_ou_editar_produto` e `transferir_oportunidades`, que só preparam, e `confirmar_alteracao`, que grava depois do "sim". Escrita só para gerente (própria filial) e diretoria | `mcp/` | §1–§5, §7, §11 |
+| Histórico das alterações feitas pelo MCP (quem, quando, registro, valor anterior e novo), com filtro e CSV, para diretoria e gerentes; o painel aplica as alterações por cima das planilhas | `/historico`, `/historico.csv` | §11 |
+| Contas de gerente por filial e criação só das contas que faltam | `app/criar_usuarios.ps1 -Completar` | §11.2 |
 | Relatório semanal da diretoria em PDF: ranking, abaixo de 80%, pipeline por etapa, previsão vencida, maior saída e parados, e três riscos analisados pelo Claude Code ([docs/RELATORIO_DIRETORIA.md](docs/RELATORIO_DIRETORIA.md)) | `/relatorio-diretoria` no Claude Code, ou `app/relatorio_diretoria.ps1` | §1–§5, §7 |
 
 **O que o painel carrega:**
@@ -164,12 +167,13 @@ GitHub.
 - **Vendas:** `dados/vendas_2026_jan-ago.xlsx` e, por cima, as importações confirmadas em `dados/importacoes/vendas/`, em ordem (§9.8). Sem importação, o período vai de janeiro a agosto e a data-base de vendas é 31/08/2026. Depois de importar setembro, vai até setembro e a data-base passa a 19/09/2026, com o aviso "parcial até 19/09" (§4.5).
 - **Estoque:** a foto de data mais recente entre `dados/estoque_*.xlsx` e as importadas em `dados/importacoes/estoque/`. Hoje é a de 31/08/2026.
 - **CRM:** a foto de 31/08/2026. O CRM não é importado pela tela.
+- **Alterações de cadastro** (vendedores, metas, produtos e donos de oportunidades) confirmadas pelo Claude Desktop: `dados/importacoes/alteracoes.csv`, aplicado por cima de tudo, na ordem em que foi gravado (§11.4). As planilhas originais não mudam.
 
 ### Previsto (ainda não implementado)
 
 | Requisito | Regra | Observação |
 |---|---|---|
-| Reatribuição de oportunidades órfãs por um gestor | §2.4 | A regra existe; falta a tela. |
+| Reatribuição de oportunidades órfãs pela tela do painel | §2.4 | Já é possível pelo Claude Desktop (`transferir_oportunidades`, §11.9); falta a tela. |
 | Visão do gerente restrita à própria filial | — | Sem regra aprovada. Hoje todos veem tudo. |
 
 **Sobre `dados/atualizacoes/`:** o painel não lê essa pasta diretamente. Os dois
