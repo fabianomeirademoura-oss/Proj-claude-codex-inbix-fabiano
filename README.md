@@ -57,7 +57,12 @@ painel-horizonte/
 │   ├── PAINEL.md            manual do painel: contas, telas e conferência no Excel
 │   └── RELATORIO_DIRETORIA.md  relatório semanal da diretoria em PDF
 ├── relatorios/          LOCAL: relatórios semanais gerados (fora do Git)
-└── testes/              conferências independentes e teste de ponta a ponta
+├── testes/              conferências independentes, teste de ponta a ponta e paridade Node × PowerShell
+├── web/                 versão Node do painel, para a Vercel (espelho de app/; contas públicas em contas_publicas.json)
+├── api/index.js         entrada da Vercel (chama web/app.js)
+├── public/              arquivos estáticos da Vercel (só robots.txt: nada de dados/ fica público sem login)
+├── vercel.json          configuração da Vercel
+└── package.json         metadados da versão Node (sem dependências)
 ```
 
 ## Como executar
@@ -79,6 +84,28 @@ pwsh -NoProfile -File app/servidor.ps1 -Porta 8080
 - **Login:** `diretoria`, ou o e-mail de um vendedor ativo. As senhas estão no `.env`.
 - **Detalhes:** contas, telas e como conferir cada número no Excel estão em [docs/PAINEL.md](docs/PAINEL.md).
 
+### Versão web (Vercel)
+
+A Vercel não roda PowerShell. Para publicar o painel na internet, ele tem uma
+segunda versão em Node, em `web/`, sem dependências. Ela lê as mesmas planilhas
+de `dados/` e gera as mesmas telas, byte a byte (`testes/paridade_node.ps1`).
+A versão PowerShell continua sendo a de referência. Regra nova ou tela nova
+entra primeiro nela e depois é espelhada em `web/`, arquivo por arquivo
+(`Regras.ps1` → `web/lib/regras.js`, `Paginas.ps1` → `web/lib/paginas.js` etc.).
+
+- **Publicação:** cada merge na `main` publica sozinho. A Vercel está ligada ao
+  repositório (`vercel.json` manda todas as rotas para `api/index.js`).
+- **Conta dos alunos:** `teste` / `teste`, perfil `leitura`. Ela vê todas as
+  telas e não importa. O hash dessa conta está em `web/contas_publicas.json`.
+- **Sem importação na internet:** a Vercel não tem disco permanente. A versão
+  publicada mostra a base de `dados/` (janeiro a agosto) e importa só na versão
+  local (§9).
+- **Outras contas na Vercel (opcional):** configure `HORIZONTE_SEGREDO` (texto
+  aleatório longo) e `HORIZONTE_USUARIOS` (o conteúdo de um `usuarios.json`)
+  nas variáveis de ambiente do projeto. Sem o segredo, só as contas públicas
+  entram.
+- **Rodar a versão Node na máquina:** `node web/servidor.js 8090`.
+
 ## Testes
 
 Rode a partir desta pasta. No Windows, cada `conferir*.ps1` tem um `.cmd` com o
@@ -93,6 +120,7 @@ mesmo nome em `testes\`.
 | `pwsh -NoProfile -File testes/conferir_importacao.ps1` | Importação de vendas e de estoque numa cópia temporária de `dados/`: resumo, gravação, reimportação, recusas | 70 conferências |
 | `pwsh -NoProfile -File testes/conferir_relatorio_diretoria.ps1` | Relatório semanal da diretoria: itens 1 a 5 contra as planilhas brutas e a §6, PDF e `calculo.json` idênticos em duas execuções, recusa de riscos inválidos, setembro importado | 237 conferências |
 | `pwsh -NoProfile -File testes/teste_e2e.ps1` | Sobe o servidor com contas temporárias, numa cópia temporária de `dados/`, e testa login, permissões, telas, CSV e importação por HTTP | 73 verificações |
+| `pwsh -NoProfile -File testes/paridade_node.ps1` | Sobe as versões PowerShell e Node lado a lado e compara status, tipo e corpo de 130 telas e CSV nas contas `teste`, vendedor e diretoria (precisa do `node`) | 1.598 verificações |
 
 As seis conferências somam **1.707** comparações. Todas devem terminar com
 "Todas as N … bateram". Nenhum teste grava nos dados reais: as conferências
