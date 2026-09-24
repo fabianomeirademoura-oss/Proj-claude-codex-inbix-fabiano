@@ -36,12 +36,12 @@ function fotosEstoque(dirDados, dirImportacoes) {
 function assinaturaEstoque(dirDados, dirImportacoes) {
   const partes = ARQUIVOS_FIXOS.map((n) => R.assinaturaArquivo(path.join(dirDados, n), n));
   for (const f of fotosEstoque(dirDados, dirImportacoes)) partes.push(R.assinaturaArquivo(f.caminho, f.caminho));
-  return partes.join(';');
+  return [...partes, ...R.assinaturaAlteracoes(dirImportacoes)].join(';');
 }
 
 function quantidade(texto) { const n = N.inteiro(texto); return n === null || n < 0 ? null : n; }
 
-function carregarBaseEstoque(dirDados, dirImportacoes) {
+function carregarBaseEstoque(dirDados, dirImportacoes, alteracoesAdicionais) {
   const erros = [];
   for (const nome of ARQUIVOS_FIXOS) if (!R.existe(path.join(dirDados, nome))) erros.push(`Arquivo não encontrado: ${path.join(dirDados, nome)}`);
   const foto = fotosEstoque(dirDados, dirImportacoes)[0];
@@ -57,7 +57,9 @@ function carregarBaseEstoque(dirDados, dirImportacoes) {
 
   const produtos = [];
   const produtoPorId = new Map();
-  for (const r of lerAba(path.join(dirDados, 'produtos.xlsx'), 'Produtos')) {
+  // §11.4: produtos cadastrados ou editados por alteração confirmada valem por cima do catálogo.
+  const alteracoes = [...R.lerAlteracoes(dirImportacoes), ...(alteracoesAdicionais || [])];
+  for (const r of R.mesclarAlteracoes(lerAba(path.join(dirDados, 'produtos.xlsx'), 'Produtos'), alteracoes, 'produto', (x) => x['ID Produto'], R.COLUNAS_PRODUTOS, erros)) {
     const onde = `produtos.xlsx, linha ${r._Linha}`;
     const id = r['ID Produto'];
     if (!id) { erros.push(`${onde}: ID Produto vazio`); continue; }

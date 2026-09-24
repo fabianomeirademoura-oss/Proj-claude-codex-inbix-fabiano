@@ -42,16 +42,25 @@ function criarFonte(dirDados) {
   const comercial = () => exigir(lembrar('comercial', R.assinaturaBase(dirDados, dirImportacoes), () => R.carregarBaseComercial(dirDados, dirImportacoes)));
   const pipeline = () => {
     const base = comercial();
-    const a = `${RP.assinaturaPipeline(dirDados)}#${R.assinaturaBase(dirDados, dirImportacoes)}`;
-    return exigir(lembrar('pipeline', a, () => RP.carregarBasePipeline(dirDados, base)));
+    const a = `${RP.assinaturaPipeline(dirDados, dirImportacoes)}#${R.assinaturaBase(dirDados, dirImportacoes)}`;
+    return exigir(lembrar('pipeline', a, () => RP.carregarBasePipeline(dirDados, base, dirImportacoes)));
   };
   const estoque = () => exigir(lembrar('estoque', RE.assinaturaEstoque(dirDados, dirImportacoes), () => RE.carregarBaseEstoque(dirDados, dirImportacoes)));
   const catalogo = () => {
-    // Colunas do cadastro que as regras não carregam (marca, modelo, preço de tabela).
+    // Colunas do cadastro que as regras não carregam (marca, modelo, preço de tabela), com as alterações (§11.4).
     const p = path.join(dirDados, 'produtos.xlsx');
-    return lembrar('catalogo', R.assinaturaArquivo(p, 'produtos.xlsx'), () => lerAba(p, 'Produtos'));
+    const a = [R.assinaturaArquivo(p, 'produtos.xlsx'), ...R.assinaturaAlteracoes(dirImportacoes)].join(';');
+    return lembrar('catalogo', a, () => R.mesclarAlteracoes(lerAba(p, 'Produtos'), R.lerAlteracoes(dirImportacoes), 'produto', (x) => x['ID Produto'], R.COLUNAS_PRODUTOS, []));
   };
-  return { dirDados, comercial, pipeline, estoque, catalogo };
+  // §11.1: a base continua válida com estas alterações (ainda não gravadas)? Carrega tudo de novo, sem cache.
+  const validar = (linhas) => {
+    const base = R.carregarBaseComercial(dirDados, dirImportacoes, null, linhas);
+    if (base.Erros.length) return { erros: base.Erros };
+    const pipe = RP.carregarBasePipeline(dirDados, base, dirImportacoes, linhas);
+    const est = RE.carregarBaseEstoque(dirDados, dirImportacoes, linhas);
+    return { erros: [...pipe.Erros, ...est.Erros], base, pipeline: pipe, estoque: est };
+  };
+  return { dirDados, dirImportacoes, comercial, pipeline, estoque, catalogo, validar };
 }
 
 // ---------- formatação da resposta ----------
@@ -500,16 +509,21 @@ const FERRAMENTAS = [
   },
 ].map((f) => ({ ...f, annotations: { title: f.title, ...somenteLeitura } }));
 
-// Executa uma ferramenta: { ok: true, resultado } ou { ok: false, erro, detalhe }.
-function executar(fonte, nome, args) {
-  const f = FERRAMENTAS.find((x) => x.name === nome);
+// Executa uma ferramenta da lista: { ok: true, resultado } ou { ok: false, erro, detalhe }.
+// ctx: o que a escrita precisa além dos dados (quem está usando, como pedir confirmação).
+async function executar(lista, fonte, nome, args, ctx) {
+  const f = lista.find((x) => x.name === nome);
   if (!f) return { ok: false, erro: `Ferramenta desconhecida: ${nome}` };
   try {
-    return { ok: true, resultado: f.executar(fonte, args || {}) };
+    return { ok: true, resultado: await f.executar(fonte, args || {}, ctx) };
   } catch (e) {
     if (e instanceof ErroFerramenta) return { ok: false, erro: e.message, detalhe: e.detalhe };
     throw e;
   }
 }
 
-module.exports = { FERRAMENTAS, criarFonte, executar };
+module.exports = {
+  FERRAMENTAS, criarFonte, executar, ErroFerramenta, NOMES_MES, LIMITE_PADRAO, LIMITE_MAXIMO,
+  reais, data, mesTexto, percentual, marcacao, vendedorResumo, semAcento, casaPalavras, texto, inteiro, logico,
+  resolverVendedor, periodoValido,
+};

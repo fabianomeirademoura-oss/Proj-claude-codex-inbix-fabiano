@@ -64,6 +64,7 @@ function New-Layout([string]$Titulo, [string]$Corpo, $Usuario, [string]$Secao = 
     <a href="/pipeline"$(& $ativo 'pipeline')>Pipeline</a>
     <a href="/funil"$(& $ativo 'funil')>Funil</a>
     <a href="/estoque"$(& $ativo 'estoque')>Estoque</a>
+    $(if ($Usuario.perfil -in @('diretoria', 'gerente')) { "<a href=""/historico""$(& $ativo 'historico')>Histórico</a>" })
     $(if ($Usuario.perfil -eq 'diretoria') { "<a href=""/importar""$(& $ativo 'importar')>Importar</a>" })
   </nav>
   <div class="usuario">$(Esc $Usuario.nome)

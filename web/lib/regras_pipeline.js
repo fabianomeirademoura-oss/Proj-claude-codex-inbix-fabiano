@@ -12,11 +12,14 @@ const ETAPAS_FECHADAS = ['Fechada Ganha', 'Fechada Perdida'];
 const ARQUIVOS_PIPELINE = ['crm_oportunidades.xlsx', 'clientes.xlsx', 'vendedores.xlsx', 'produtos.xlsx'];
 const ETAPAS_FUNIL = ['Prospecção', 'Qualificação', 'Proposta Enviada', 'Negociação'];   // §8, de cima para baixo
 
-function assinaturaPipeline(dirDados) { return ARQUIVOS_PIPELINE.map((n) => R.assinaturaArquivo(path.join(dirDados, n), n)).join(';'); }
+function assinaturaPipeline(dirDados, dirImportacoes) {
+  return [...ARQUIVOS_PIPELINE.map((n) => R.assinaturaArquivo(path.join(dirDados, n), n)), ...R.assinaturaAlteracoes(dirImportacoes)].join(';');
+}
 
 function aberta(etapa) { return !N.contem(ETAPAS_FECHADAS, etapa); }   // §7
 
-function carregarBasePipeline(dirDados, comercial) {
+// §11.4: com dirImportacoes, as alterações confirmadas (produtos e donos das oportunidades) valem por cima da base.
+function carregarBasePipeline(dirDados, comercial, dirImportacoes, alteracoesAdicionais) {
   const erros = [];
   const caminhos = {};
   for (const nome of ARQUIVOS_PIPELINE) {
@@ -28,8 +31,9 @@ function carregarBasePipeline(dirDados, comercial) {
 
   const fil = R.mapaFiliais(caminhos['vendedores.xlsx']);
 
+  const alteracoes = [...R.lerAlteracoes(dirImportacoes), ...(alteracoesAdicionais || [])];
   const produtoPorId = new Map();   // só o necessário para a categoria do funil (§8.4)
-  for (const r of lerAba(caminhos['produtos.xlsx'], 'Produtos')) {
+  for (const r of R.mesclarAlteracoes(lerAba(caminhos['produtos.xlsx'], 'Produtos'), alteracoes, 'produto', (x) => x['ID Produto'], R.COLUNAS_PRODUTOS, erros)) {
     if (r['ID Produto']) produtoPorId.set(r['ID Produto'], { Id: r['ID Produto'], Nome: r.Produto, Categoria: r.Categoria });
   }
 
@@ -47,7 +51,7 @@ function carregarBasePipeline(dirDados, comercial) {
 
   const oportunidades = [];
   const ids = new Set();
-  for (const r of lerAba(caminhos['crm_oportunidades.xlsx'], 'Oportunidades')) {
+  for (const r of R.mesclarAlteracoes(lerAba(caminhos['crm_oportunidades.xlsx'], 'Oportunidades'), alteracoes, 'oportunidade', (x) => x['ID Oportunidade'], [], erros)) {
     const onde = `crm_oportunidades.xlsx, linha ${r._Linha}`;
     const id = r['ID Oportunidade'];
     if (!id) { erros.push(`${onde}: ID Oportunidade vazio`); continue; }

@@ -57,8 +57,9 @@ try {
     Confere 'nome do servidor' 'horizonte-maquinas' $r.result.serverInfo.name
     Enviar 'notifications/initialized' $null -Notificacao
     $r = Enviar 'tools/list' @{}
-    Confere 'ferramentas' 'consultar_vendedor,buscar_produto,ver_estoque,ver_meta,listar_oportunidades' (($r.result.tools | ForEach-Object name) -join ',')
-    foreach ($t in $r.result.tools) {
+    # As de escrita (§11) são conferidas em testes/conferir_escrita_mcp.ps1.
+    Confere 'ferramentas de leitura' 'consultar_vendedor,buscar_produto,ver_estoque,ver_meta,listar_oportunidades' (($r.result.tools | Select-Object -First 5 | ForEach-Object name) -join ',')
+    foreach ($t in ($r.result.tools | Select-Object -First 5)) {
         Confere "$($t.name): só leitura" 'True|False' "$($t.annotations.readOnlyHint)|$($t.annotations.destructiveHint)"
         Confere "$($t.name): parâmetros em objeto" 'object' $t.inputSchema.type
     }

@@ -140,7 +140,7 @@ function Get-ResumoImportacao {
     if ($emVigor -and $dataNova -lt $emVigor.Data) {
         return New-Recusa $Tipo $NomeOriginal @("A foto de $($dataNova.ToString('dd/MM/yyyy')) é mais antiga que a foto em vigor, de $($emVigor.Data.ToString('dd/MM/yyyy')). Uma foto mais antiga não pode substituir uma mais nova (REGRAS_NEGOCIO.md §5 e §9.6).")
     }
-    $nova = Import-BaseEstoque -DirDados $DirDados -ArquivoFoto $Caminho -DataFoto $dataNova
+    $nova = Import-BaseEstoque -DirDados $DirDados -DirImportacoes $dirImp -ArquivoFoto $Caminho -DataFoto $dataNova   # catálogo em vigor (§11.4)
     if ($nova.Erros.Count) { return New-Recusa $Tipo $NomeOriginal (& $trocaNome $nova.Erros) }
     $atual = Import-BaseEstoque -DirDados $DirDados -DirImportacoes $dirImp
     $chave = { param($l) "$($l.Produto.Id)|$($l.IdFilial)" }
